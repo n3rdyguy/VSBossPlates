@@ -232,29 +232,19 @@ internal static class BossRegistry
                 LogDataProfile(enemy);
             }
 
-            if (Plugin.RequireBestiaryEntry && !HasBestiaryEntry(enemy))
+            if (!Qualifies(enemy, type, out string why))
             {
-                if (HasTreasure(enemy))
+                bool first = prior.Count == 0;
+                Reject(id, type);
+                if (first)
                 {
-                    Plugin.Dbg($"kept {type} - no Bestiary entry, but it is carrying a chest");
+                    Plugin.Dbg(
+                        $"skipped {type} - {why} " +
+                        $"(will look again for {RejectRecheckDelay * RejectAttempts:0}s)");
                 }
-                else if (IsBonusEnemy(enemy))
-                {
-                    Plugin.Dbg($"kept {type} - no Bestiary entry, but worth {ReadXp(enemy):0} xp");
-                }
-                else
-                {
-                    bool first = prior.Count == 0;
-                    Reject(id, type);
-                    if (first)
-                    {
-                        Plugin.Dbg(
-                            $"skipped {type} - no Bestiary entry, no chest, not worth enough xp " +
-                            $"(will look again for {RejectRecheckDelay * RejectAttempts:0}s)");
-                    }
-                    return;
-                }
+                return;
             }
+            Plugin.Dbg($"kept {type} - {why}");
 
             // The mini-boss tier casts a wide net and some of those types may arrive in
             // numbers. A screen of health bars is worse than no health bars, so the cap holds
@@ -290,6 +280,55 @@ internal static class BossRegistry
         {
             Plugin.Log.LogWarning("Could not register boss: " + ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Whether this enemy earns a plate, and why - the reason is returned either way, because
+    /// "it was skipped" without a cause is the log line that costs an hour later.
+    ///
+    /// Four ways in, and they are alternatives rather than a chain of gates. Getting that wrong
+    /// is easy: an earlier version tested health before reaching the experience rule, which
+    /// would have silently killed the bonus-enemy tier. The blue glowing bat has five hit
+    /// points, so a health gate in front of the experience rule excludes the exact case that
+    /// rule exists for.
+    /// </summary>
+    private static bool Qualifies(EnemyController enemy, EnemyType type, out string why)
+    {
+        if (IsBoss(enemy))
+        {
+            why = "the game calls it a stage boss";
+            return true;
+        }
+
+        if (Plugin.IncludeTreasureCarriers && HasTreasure(enemy))
+        {
+            why = "it is carrying a chest";
+            return true;
+        }
+
+        if (IsBonusEnemy(enemy))
+        {
+            why = $"it is worth {ReadXp(enemy):0} xp";
+            return true;
+        }
+
+        // The last route, and the weakest, so it asks for two things at once: catalogued as a
+        // creature, and not filler. SKELANGUE in the Tower passes the first - it is 'Scarleton'
+        // in the Bestiary - and has two hit points. The Bestiary separates hazards from
+        // creatures, not filler from bosses, because ordinary enemies are catalogued too.
+        bool catalogued = !Plugin.RequireBestiaryEntry || HasBestiaryEntry(enemy);
+        float hp = ReadBaseHp(enemy);
+
+        if (catalogued && hp >= Plugin.MiniBossMinHp)
+        {
+            why = $"catalogued and worth {hp:0} base HP";
+            return true;
+        }
+
+        why = !catalogued
+            ? "no Bestiary entry, no chest, not worth enough xp"
+            : $"only {hp:0} base HP, below the {Plugin.MiniBossMinHp:0} needed";
+        return false;
     }
 
     /// <summary>
@@ -574,19 +613,10 @@ internal static class BossRegistry
             return false;
         }
 
-        // Being in the boss type set is not enough on its own, and the Bestiary test does not
-        // help here either.
-        //
-        // SKELANGUE in the Tower is in the set, and it is catalogued - bName 'Scarleton' - so
-        // both earlier rules waved it through. It has two hit points. It was getting a plate,
-        // dying instantly, and coming straight back out of the pool as another one, which is
-        // where the register/drop churn in the log came from. The Bestiary filters hazards,
-        // not filler; ordinary enemies are catalogued too.
-        //
-        // Base health is the honest separator. Filler sits in the low single digits - two for
-        // SKELANGUE, five for BAT4 - while the weakest thing the game actually calls a boss is
-        // an order of magnitude above that.
-        return ReadBaseHp(enemy) >= Plugin.MiniBossMinHp;
+        // Deliberately no strength test here. This decides what is worth *looking* at; what is
+        // worth a plate is settled in Register, where the chest and experience exceptions can
+        // still speak for an enemy that is weak but interesting.
+        return true;
     }
 
     /// <summary>
