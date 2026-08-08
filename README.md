@@ -7,7 +7,7 @@ While a boss is alive, a plate follows it showing a health bar, the boss name, a
 | | |
 |--|--|
 | **Latest release** | [v0.1.2](https://github.com/n3rdyguy/VSBossPlates/releases/tag/v0.1.2) - development build |
-| **Game** | Vampire Survivors **1.15.x** (tested **1.15.114**), Unity **6000.0.62f1** |
+| **Game** | Vampire Survivors **1.15.x** (developed against **1.15.114**) and **1.16**, Unity **6000.0.62f1** |
 | **Loader** | [BepInEx 6 IL2CPP](https://builds.bepinex.dev/projects/bepinex_be) (BE / bleeding-edge) |
 
 Independent of [VS Evolution Helper](https://github.com/n3rdyguy/VSEvolutionHelperEx) - separate plugin, separate config, separate GUID. Install either, both, or neither.
@@ -86,6 +86,8 @@ See [`docs/RENDER-SPEC.md`](docs/RENDER-SPEC.md) for the full reasoning and [`do
 
 ## Caveats
 
-- Verified against Vampire Survivors 1.15.114 only
+- Developed and smoke-tested against Vampire Survivors 1.15.114. Also played on **1.16** with no
+  problems seen, which says the enemy API this mod reads did not move, but 1.16 has not been
+  through the full checklist in `docs/SMOKE-TEST.md`
 - Boss names come from the Bestiary family name, which is right for bosses but would be wrong on a variant enemy. If a boss is ever misnamed, it needs a small override table
 - Bosses with more than one life refill their health rather than dying; the bar refills with them
