@@ -244,7 +244,6 @@ internal static class BossRegistry
                 }
                 return;
             }
-            Plugin.Dbg($"kept {type} - {why}");
 
             // The mini-boss tier casts a wide net and some of those types may arrive in
             // numbers. A screen of health bars is worse than no health bars, so the cap holds
@@ -274,7 +273,11 @@ internal static class BossRegistry
                 IsMajor = IsBoss(enemy)
             };
             Tracked.Add(entry);
-            Plugin.Dbg($"registered {entry.Type} (id {id}, {Tracked.Count} tracked)");
+
+            // Logged here rather than the moment it qualified, because the plate cap can still
+            // turn it away - and a "kept" line for an enemy that never got a plate is a lie
+            // that repeats every scan.
+            Plugin.Dbg($"registered {entry.Type} (id {id}, {Tracked.Count} tracked) - {why}");
         }
         catch (Exception ex)
         {
@@ -294,10 +297,17 @@ internal static class BossRegistry
     /// </summary>
     private static bool Qualifies(EnemyController enemy, EnemyType type, out string why)
     {
-        if (IsBoss(enemy))
+        // Hazards first, and this veto outranks even the game's own boss flag.
+        //
+        // BULLET_W - a rising wall of water - reports IsBoss true in Boss Rash, so anything
+        // that trusts that flag plates it. It gives no experience and the Bestiary has never
+        // heard of it, which is the pair that gives it away: four genuine bosses also award no
+        // experience (the Reaper, the Maddener, the Stalker, the Trickster) and every one of
+        // them is catalogued. Neither test alone is enough; together they are exact.
+        if (ReadXp(enemy) <= 0f && !HasBestiaryEntry(enemy))
         {
-            why = "the game calls it a stage boss";
-            return true;
+            why = "no experience and no Bestiary entry, so scenery rather than a creature";
+            return false;
         }
 
         if (Plugin.IncludeTreasureCarriers && HasTreasure(enemy))
@@ -312,20 +322,28 @@ internal static class BossRegistry
             return true;
         }
 
-        // The last route, and the weakest, so it asks for two things at once: catalogued as a
-        // creature, and not filler. SKELANGUE in the Tower passes the first - it is 'Scarleton'
-        // in the Bestiary - and has two hit points. The Bestiary separates hazards from
-        // creatures, not filler from bosses, because ordinary enemies are catalogued too.
+        // The health floor applies to the game's boss flag too, which it did not before.
+        // MOON_EYE2 in Boss Rash is flagged as a boss and has three hit points; it was
+        // registering, dying instantly, and coming straight back out of the pool - 253 times in
+        // one run - and each of those held a slot in the plate cap that a real boss then could
+        // not have. Being flagged as a boss is not the same as being worth a health bar.
+        //
+        // Nothing strong is lost by this. The weak bosses that matter are already through:
+        // BOSS_HARPY and BOSS_SKULL2 are five hit points and carry chests, DEVIL3 is five and
+        // worth thirty experience.
+        bool flagged = IsBoss(enemy);
         bool catalogued = !Plugin.RequireBestiaryEntry || HasBestiaryEntry(enemy);
         float hp = ReadBaseHp(enemy);
 
-        if (catalogued && hp >= Plugin.MiniBossMinHp)
+        if ((flagged || catalogued) && hp >= Plugin.MiniBossMinHp)
         {
-            why = $"catalogued and worth {hp:0} base HP";
+            why = flagged
+                ? $"the game calls it a stage boss, worth {hp:0} base HP"
+                : $"catalogued and worth {hp:0} base HP";
             return true;
         }
 
-        why = !catalogued
+        why = !flagged && !catalogued
             ? "no Bestiary entry, no chest, not worth enough xp"
             : $"only {hp:0} base HP, below the {Plugin.MiniBossMinHp:0} needed";
         return false;
