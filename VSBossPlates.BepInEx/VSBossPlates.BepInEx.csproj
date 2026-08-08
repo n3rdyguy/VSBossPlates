@@ -69,6 +69,16 @@
       <HintPath>$(BepInExPath)\interop\Newtonsoft.Json.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- Il2CppSystem.Collections.Generic.HashSet, which is what EnemyFactory._bossTypes is. -->
+    <Reference Include="Il2CppSystem.Core">
+      <HintPath>$(BepInExPath)\interop\Il2CppSystem.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- EnemyFactory derives from Odin's SerializedScriptableObject. -->
+    <Reference Include="Sirenix.Serialization">
+      <HintPath>$(BepInExPath)\interop\Sirenix.Serialization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
 
     <!-- Unity. The plate is a world-space Canvas with Images and TextMeshPro. -->
     <Reference Include="UnityEngine.CoreModule">

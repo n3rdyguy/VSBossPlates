@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,6 +31,7 @@ internal sealed class BossPlate
     private const float PlateHeight = 56f;
     private const float BarHeightFraction = 0.42f;
     private const float BarInset = 2f;
+    private const float TextPadding = 4f;
 
     private GameObject _root;
     private RectTransform _fill;
@@ -37,17 +39,22 @@ internal sealed class BossPlate
     private TextMeshProUGUI _hpText;
     private bool _visible = true;
 
+    /// <summary>A scheduled stage boss rather than a mini-boss. Decides which scale applies -
+    /// see Scale.</summary>
+    private bool _isMajor;
+
     private static Sprite _whiteSprite;
     private static TMP_FontAsset _font;
     private static bool _warnedNoFont;
 
-    internal static BossPlate Create(EnemyController enemy, string displayName)
+    internal static BossPlate Create(EnemyController enemy, string displayName, bool isMajor)
     {
         try
         {
             Camera cam = ResolveCamera(enemy);
 
             var plate = new BossPlate();
+            plate._isMajor = isMajor;
             plate.Build(enemy, displayName, cam);
             return plate._root == null ? null : plate;
         }
@@ -74,7 +81,7 @@ internal sealed class BossPlate
 
         var rootRect = _root.GetComponent<RectTransform>();
         rootRect.sizeDelta = new Vector2(PlateWidth, PlateHeight);
-        rootRect.localScale = Vector3.one * Plugin.PlateScale;
+        rootRect.localScale = Vector3.one * Scale;
         rootRect.rotation = Quaternion.identity;
 
         Sprite white = GetWhiteSprite();
@@ -106,18 +113,31 @@ internal sealed class BossPlate
 
         if (Plugin.ShowName)
         {
+            // A backing panel, not bare text. White text alone disappears on the pale stone
+            // floors, and an outline would mean building a TMP material variant per plate.
+            GameObject nameBgGo = NewChild(_root.transform, "NameBg");
+            var nameBgRect = nameBgGo.GetComponent<RectTransform>();
+            nameBgRect.anchorMin = new Vector2(0f, BarHeightFraction);
+            nameBgRect.anchorMax = new Vector2(1f, 1f);
+            nameBgRect.offsetMin = Vector2.zero;
+            nameBgRect.offsetMax = Vector2.zero;
+            Image nameBgImage = nameBgGo.AddComponent<Image>();
+            nameBgImage.sprite = white;
+            ((Graphic)nameBgImage).color = new Color(0.05f, 0.05f, 0.06f, 0.6f);
+            ((Graphic)nameBgImage).raycastTarget = false;
+
             _nameText = AddText(
-                _root.transform, "Name", displayName, font, 22f,
-                new Color(1f, 1f, 1f, 1f), TextAlignmentOptions.Bottom,
-                new Vector2(0f, BarHeightFraction), new Vector2(1f, 1f));
+                nameBgGo.transform, "Name", displayName, font, 22f,
+                new Color(1f, 1f, 1f, 1f), TextAlignmentOptions.Midline,
+                TextPadding);
         }
 
         if (Plugin.ShowNumbers)
         {
             _hpText = AddText(
                 barGo.transform, "Hp", "", font, 16f,
-                new Color(1f, 1f, 1f, 0.95f), TextAlignmentOptions.Center,
-                Vector2.zero, Vector2.one);
+                new Color(1f, 1f, 1f, 0.95f), TextAlignmentOptions.Midline,
+                TextPadding);
         }
     }
 
@@ -157,7 +177,7 @@ internal sealed class BossPlate
 
         if (_hpText != null)
         {
-            ((TMP_Text)_hpText).text = FormatHp(current) + " / " + FormatHp(max);
+            ((TMP_Text)_hpText).text = FormatPair(current, max);
         }
     }
 
@@ -185,13 +205,14 @@ internal sealed class BossPlate
         }
         catch { }
 
-        float halfPlate = PlateHeight * 0.5f * Plugin.PlateScale;
+        float scale = Scale;
+        float halfPlate = PlateHeight * 0.5f * scale;
         _root.transform.position = new Vector3(
             basePos.x,
             top + Plugin.VerticalOffset + halfPlate,
             basePos.z);
         _root.transform.rotation = Quaternion.identity;
-        _root.transform.localScale = Vector3.one * Plugin.PlateScale;
+        _root.transform.localScale = Vector3.one * scale;
     }
 
     internal void SetVisible(bool visible)
@@ -212,11 +233,51 @@ internal sealed class BossPlate
         _hpText = null;
     }
 
-    private static string FormatHp(float value)
+    /// <summary>
+    /// Invariant culture throughout. On a Danish system the default formatter renders 1.8M as
+    /// "1,8M", which reads as a thousands separator to most of the mod's audience and is what
+    /// the first in-game screenshot showed. Numbers on a health bar are not prose; they should
+    /// look the same everywhere.
+    /// </summary>
+    /// <summary>
+    /// Both halves share a unit, chosen from the maximum.
+    ///
+    /// Formatting each number independently produced "393k / 393.2k", where the two sides use
+    /// different precision and the boss looks damaged when it is untouched. The pair is one
+    /// quantity read twice; it should be scaled once.
+    /// </summary>
+    /// <summary>
+    /// Read every frame rather than captured at build time, so changing the setting takes
+    /// effect on plates already on screen instead of only on the next boss.
+    /// </summary>
+    private float Scale => _isMajor ? Plugin.PlateScale : Plugin.MiniBossPlateScale;
+
+    private static string FormatPair(float current, float max)
     {
-        if (value >= 1000000f) return (value / 1000000f).ToString("0.#") + "M";
-        if (value >= 10000f) return (value / 1000f).ToString("0.#") + "k";
-        return Mathf.Max(0f, value).ToString("0");
+        var inv = CultureInfo.InvariantCulture;
+        current = Mathf.Max(0f, current);
+        max = Mathf.Max(0f, max);
+
+        float divisor = 1f;
+        string suffix = "";
+        string format = "0";
+
+        if (max >= 1000000f)
+        {
+            divisor = 1000000f;
+            suffix = "M";
+            format = "0.0";
+        }
+        else if (max >= 10000f)
+        {
+            divisor = 1000f;
+            suffix = "k";
+            format = "0.0";
+        }
+
+        return (current / divisor).ToString(format, inv) + suffix +
+               " / " +
+               (max / divisor).ToString(format, inv) + suffix;
     }
 
     private static GameObject NewChild(Transform parent, string name)
@@ -227,27 +288,39 @@ internal sealed class BossPlate
         return go;
     }
 
+    /// <summary>
+    /// Fills its parent, inset by <paramref name="padding"/>, and shrinks itself to fit.
+    ///
+    /// The first version pinned the text to the bar rect with wrapping off and overflow
+    /// allowed, which meant "393k / 393.2k" simply spilled out past both ends of the bar. A
+    /// health plate is a fixed box by nature: the text has to give, not the box. TMP auto-sizing
+    /// does that for nothing, and the floor stops it shrinking into illegibility - if the text
+    /// cannot fit at the minimum it will overflow, which is at least visible as a problem.
+    /// </summary>
     private static TextMeshProUGUI AddText(
         Transform parent, string name, string text, TMP_FontAsset font, float size,
-        Color color, TextAlignmentOptions align, Vector2 anchorMin, Vector2 anchorMax)
+        Color color, TextAlignmentOptions align, float padding)
     {
         if (font == null) return null;
 
         GameObject go = NewChild(parent, name);
         var rect = go.GetComponent<RectTransform>();
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = new Vector2(padding, padding);
+        rect.offsetMax = new Vector2(-padding, -padding);
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
         ((TMP_Text)tmp).font = font;
         ((TMP_Text)tmp).text = text ?? "";
-        ((TMP_Text)tmp).fontSize = size;
         ((TMP_Text)tmp).alignment = align;
         ((TMP_Text)tmp).enableWordWrapping = false;
         ((TMP_Text)tmp).overflowMode = TextOverflowModes.Overflow;
         ((TMP_Text)tmp).richText = false;
+        ((TMP_Text)tmp).enableAutoSizing = true;
+        ((TMP_Text)tmp).fontSizeMax = size;
+        ((TMP_Text)tmp).fontSizeMin = size * 0.45f;
+        ((TMP_Text)tmp).fontSize = size;
         ((Graphic)tmp).color = color;
         ((Graphic)tmp).raycastTarget = false;
         return tmp;

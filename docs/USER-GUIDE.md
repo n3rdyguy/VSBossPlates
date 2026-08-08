@@ -20,11 +20,44 @@ anything, and it touches no save data.
 
 ## 2. What counts as a boss
 
-Whatever the game itself considers a boss. The mod asks each enemy directly rather than
-keeping a list of boss names, so DLC bosses and future bosses are included automatically and
-nothing needs updating when new ones arrive.
+Two tiers, because the game's own idea of a boss is narrower than yours.
 
-Ordinary enemies, including the large ones that arrive in waves, do not get a plate.
+The game flags an enemy as a boss only when it is the **scheduled stage boss** - the one the
+timer sends at a set minute. The Reaper counts. The XL mummies and the other strong
+mini-bosses do not, even though those are exactly the enemies whose remaining health you want
+to know.
+
+**The clearest mark of a mini-boss is the chest it drops.** The game records that on the
+individual enemy, so it is the one test that cannot be fooled: the same creature is plated when
+the stage gave it a chest and ignored when it did not. Nothing else about a chest carrier need
+stand out - the winged enemy in the Chapel has no Bestiary entry, three experience and fifteen
+hit points, and is still a mini-boss. Set `IncludeTreasureCarriers` to `false` to ignore them.
+
+Beyond that the mod also plates anything belonging to a type the game is willing to use as a
+boss at all. Set `IncludeMiniBosses` to `false` for scheduled stage bosses only.
+
+Both tiers are read from the game itself rather than from a list of names, so DLC bosses and
+future bosses are included automatically and nothing needs updating when new ones arrive.
+
+Ordinary enemies do not get a plate.
+
+**Stage hazards do not either, even though the game calls them bosses.** Some hazards are built
+on the same machinery a boss is and report themselves as one, while having no health you can do
+anything about. The mod tells the two apart by asking whether the Bestiary has an entry: a
+creature you fight is catalogued, a hazard is not. Set `RequireBestiaryEntry` to `false` to see
+a plate on everything the game calls a boss.
+
+**Bonus enemies are the exception to that rule.** The blue glowing bat in Mad Forest has no
+Bestiary record and five hit points, so nothing above would keep it - but it is worth thirty
+experience where an ordinary enemy gives one or two, and that is the whole reason you chase it.
+Anything worth at least `BonusXpThreshold` experience gets a plate regardless. Set it to `0` if
+you would rather not see them.
+
+A bonus enemy is defined by being worth killing, not by being hard to kill, which is why the
+test is experience rather than health.
+
+At most `MaxPlates` plates are drawn at once, twelve by default. A wall of health bars is worse
+than none.
 
 ## 3. When a plate appears and disappears
 
@@ -64,8 +97,53 @@ the mod installed. Edit it with the game closed.
 | `ShowName` | `true` | Show the boss name above the bar |
 | `ShowNumbers` | `true` | Show current and maximum HP on the bar |
 | `HideWhenFull` | `false` | Only show a plate once the boss has taken damage |
+| `IncludeTreasureCarriers` | `true` | Plate any enemy carrying a treasure chest, whatever else it looks like. The game's own mark of a mini-boss |
+| `IncludeMiniBosses` | `true` | Also plate strong mini-bosses, not just the scheduled stage boss |
+| `MaxPlates` | `12` | Most plates on screen at once |
+| `RequireBestiaryEntry` | `true` | Only draw a plate for a boss the Bestiary knows about, so stage hazards are skipped |
+| `BonusXpThreshold` | `25` | Also plate an enemy worth at least this much experience, Bestiary entry or not. Set to `0` to turn the exception off. Range 0 to 10000 |
 | `VerticalOffset` | `0.35` | Extra gap in world units between the top of the boss sprite and the plate. The plate already sits above the sprite, so this is a nudge rather than the whole distance. Range -2 to 5 |
-| `PlateScale` | `0.012` | How large the plate is drawn, in world units per plate unit. Raise it if the plate is hard to read on a large monitor. Range 0.002 to 0.06 |
+| `PlateScale` | `0.008` | How large a boss plate is drawn. See the table below. Range 0.001 to 0.03 |
+| `MiniBossPlateScale` | `0.005` | The same for mini-bosses, chest carriers and bonus enemies. Range 0.001 to 0.03 |
+| `ScanIntervalSeconds` | `0.5` | How often the mod looks for newly spawned bosses. A boss can get its plate up to this late. Lower is more responsive but checks the live enemy list more often, and that list holds thousands of entries late in a run. Range 0.1 to 5 |
+
+**Mini-bosses get their own size, and a smaller one by default.** There are many more of them
+than there are stage bosses, and none of them is the thing you are actually worried about; a
+plate the size of the Reaper's over every chest carrier turns a busy screen into a wall of
+health bars. The two settings are independent, so set them equal if you would rather they
+matched.
+
+Plate size is mostly taste, so it is worth knowing what the numbers look like:
+
+| `PlateScale` | Looks like |
+|--------------|------------|
+| `0.004` | Discreet. Readable if you look at it, easy to ignore otherwise |
+| `0.008` | Default. Hard to miss, reads at a glance on a busy screen |
+| `0.012` | Theatrical. The boss name alone spans about a third of the screen |
+| `0.03` | Absurd, and available on purpose |
+
+**Small also means blurry, and that is not something a setting can fix.** Vampire Survivors
+draws the whole game to a low resolution image and scales it up - that is what keeps the art
+looking like clean pixel art. The plate is drawn into that same image, so its text gets only as
+many real pixels as its size on that small image allows. At `0.012` the HP numbers have roughly
+a dozen pixels of height to work with and look sharp. At `0.004` they have about four, and no
+amount of font tuning will recover the other eight.
+
+So pick a size for how sharp you want the numbers, not only for how much screen you want the
+plate to take.
+
+### Hotkeys
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `TogglePlatesKey` | `F9` | Shows and hides every plate, mid-run, without restarting |
+| `ToggleMiniBossesKey` | `F10` | Shows and hides mini-boss plates only, leaving the scheduled stage boss plated |
+
+Both write the new setting back to the config file, so a toggle survives a restart. Set either
+to `None` to unbind it.
+
+`ToggleMiniBossesKey` is the one worth knowing about: when a wave of strong enemies makes the
+screen busy, it clears the clutter without giving up the plate on the boss that matters.
 
 ### Debug
 

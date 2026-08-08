@@ -90,12 +90,17 @@ plate alive over whatever that instance became next.
 ### 3.1 Why teardown is not patched
 
 The game offers plenty of hooks: `OnRecycleEnemy()`, `Despawn()`, `Disappear()`, and a static
-`Action<EnemyController> OnKilledImmediate` event. None of them are used, on purpose.
+`Action<EnemyController> OnKilledImmediate` event. None of them are used, on purpose, and for
+two independent reasons.
 
-`EnemyControllerBoss` **overrides** `OnRecycleEnemy` and `Despawn`. A Harmony patch on the
-base `EnemyController` method does not fire for an instance whose subclass overrides it, so
-patching the base would silently miss exactly the enemies this mod tracks. Patching every
-declaring subclass means enumerating two dozen types that grow with every DLC.
+First, the one in section 4: **reading an `EnemyController` from inside a Harmony postfix on
+this game's enemy code kills the process.** That alone rules out every hook in the list.
+
+Second, even if it did not, `EnemyControllerBoss` **overrides** `OnRecycleEnemy` and
+`Despawn`. A Harmony patch on the base `EnemyController` method does not fire for an instance
+whose subclass overrides it, so patching the base would silently miss exactly the enemies this
+mod tracks. Patching every declaring subclass means enumerating two dozen types that grow with
+every DLC.
 
 ### 3.2 What is done instead
 
@@ -118,24 +123,57 @@ The per-frame cost is a walk over a list that holds at most a handful of entries
 
 ---
 
-## 4. Registration
+## 4. Registration: do not patch, scan
 
-Two postfixes, because neither is provably complete alone:
+**There are no Harmony patches in this mod.** That is not a stylistic preference. It is the
+result of the first build killing the game.
 
-| Hook | Catches |
-|------|---------|
-| `VampireSurvivors.Objects.Stage.SpawnBoss()` | ordinary stage bosses; returns the controller already initialised |
-| `EnemyController.AfterSpawningAsBoss()` | a boss arriving by some other route |
+### 4.1 What happened
 
-Registering the same boss twice is a no-op, so the overlap costs nothing.
+The first version registered bosses from postfixes on `Stage.SpawnBoss()` and
+`EnemyController.AfterSpawningAsBoss()`. The game died within seconds of the first scene load,
+leaving this in `BepInEx/ErrorLog.log`:
 
-**Do not patch `Stage.SpawnEnemy<T>(...)`.** It is generic, and patching a generic IL2CPP
-method is painful for no gain here.
+```
+Fatal error. System.AccessViolationException: Attempted to read or write protected memory.
+   at Il2CppInterop.Runtime.IL2CPP.il2cpp_runtime_invoke(IntPtr, IntPtr, Void**, IntPtr ByRef)
+   at UnityEngine.Object.GetInstanceID()
+   at VSBossPlates.BossRegistry.Register(EnemyController, String)
+   at VSBossPlates.BossPlatePatches.AfterSpawningAsBossPostfix(EnemyController)
+   at DynamicClass.DMD<EnemyController::AfterSpawningAsBoss>(EnemyController)
+```
 
-Methods are resolved **by name**, not by signature. Overload lists drift between versions; a
-name lookup that finds nothing logs a warning, whereas a stale signature throws at load.
+The `EnemyController` handed to that postfix is not safe to touch. `GetInstanceID()` was only
+the first native call made on it, so it is where the process died; any other read would have
+done the same.
 
-Boss membership is tested with `IsBoss` and `IsBossEnemy()`, never a type-name list. There are
+### 4.2 The rule that follows, which is easy to get wrong
+
+**A try/catch cannot save you from this.** `AccessViolationException` is a corrupted-state
+exception. Since .NET 4, and by default in .NET 6, the runtime does not deliver it to managed
+handlers - the process is terminated whether or not the call sits inside a `try`. The
+defensive try/catch used everywhere else in this mod is worthless against it.
+
+There is no guard to add. The only fix is to not make the call.
+
+### 4.3 What is done instead
+
+Discovery walks `Stage.SpawnedEnemies` from `LateUpdate`, every `ScanIntervalSeconds`
+(default 0.5). Objects reached that way are fully constructed and safe to read.
+
+The cost is that a boss gets its plate up to one scan interval late. For something that lives
+for tens of seconds, that is not worth a crash class to avoid.
+
+The list is walked **by index, not with `foreach`**: an Il2Cpp list enumerator allocates a
+wrapper per step, and this runs several times a second against a list that can hold thousands
+of entries late in a run.
+
+Also worth keeping: `Stage.SpawnEnemy<T>(...)` is generic, and patching a generic IL2CPP method
+is painful. It was never a good option either.
+
+### 4.4 Boss membership
+
+Tested with `IsBoss` and `IsBossEnemy()`, never a type-name list. There are
 two dozen boss controller subclasses today (`EnemyControllerBoss_BatDragon`,
 `EX_Boss_Colossus`, `TP_ADV_BOSS_*`, `LEMON_BOSS_*`, `EME_TeleporterBoss`, and so on) and any
 list will rot on the next DLC. `EnemyFactory._bossTypes` is the authoritative set if a
@@ -166,6 +204,31 @@ Canvas units, scaled to world units by `PlateScale`.
   the same way VS Evolution Helper does. Side effect: the plate is drawn in the game's own
   font rather than an Arial fallback. If no TMP text exists, the plate draws the bar only and
   warns once.
+- Both texts use **TMP auto-sizing**, filling their parent inset by a few units, with a floor
+  at 45% of the nominal size. A health plate is a fixed box: the text has to give, not the box.
+  The first version pinned the HP text to the bar rect with wrapping off and overflow allowed,
+  and `393k / 393.2k` spilled out past both ends of the bar.
+- The name sits on its own **backing panel**, not on bare transparency. White text alone
+  disappears against the pale stone floors, and an outline would mean building a TMP material
+  variant per plate.
+- The HP pair shares one unit, chosen from the maximum. Formatting each side independently
+  gave `393k / 393.2k`, where the two halves disagree on precision and an untouched boss looks
+  damaged.
+
+### 5.3 Small plates are blurry, and no setting fixes that
+
+The game draws to a **low-resolution render texture** and scales it up; that is what keeps the
+art looking like clean pixel art. The plate is drawn into that same texture, so its text gets
+only as many real pixels as its size on that small image allows.
+
+At `PlateScale` 0.012 the HP numbers have roughly a dozen pixels of height and look sharp. At
+0.004 they have about four. No font tuning recovers the other eight - the pixels are not there.
+
+This is the real cost of the world-space choice in section 2, and it is worth stating next to
+the benefits. If small **and** sharp is ever required, the plate has to move to a screen-space
+overlay canvas, which draws at backbuffer resolution rather than render-texture resolution, and
+pay for it with `WorldToScreenPoint` plus `CameraExtensions.GetRtZoomScaling()`. Nothing else
+gets those pixels back.
 
 ### 5.1 Vertical placement
 
@@ -195,16 +258,99 @@ Bestiary page, where `bName` printed "Spirit" on a row the game itself labels "C
 had to prefer the row's own label. Bosses are not usually variants, so `bName` is right here in
 practice.
 
-There is no better source:
+`bName` is the English name and is correct today, but it is **not** the only source. An earlier
+version of this document claimed `EnemyData` had no localization helpers. That was wrong.
+It has several:
 
-- `EnemyData` has **no** localization helper. `WeaponData` has `GetLocalizedNameTerm`;
-  enemies have no equivalent.
-- There is **no** enemy or bestiary term namespace in the game's localization data.
-- `EnemyItemUI._Name.text` is already localized but only exists on the Bestiary menu page, not
-  during a run.
+| Member | Returns |
+|--------|---------|
+| `GetLocalizedNameTerm(EnemyType)` | an I2 term |
+| `GetLocalizedBestiaryNameTerm(EnemyType)` | an I2 term |
+| `GetLocalizedDescription(EnemyType)` | text |
+| `GetLocalizedBestiaryDescription(EnemyType)` | text |
+| `GetLocalizedTips(EnemyType)` | text |
 
-If a boss is ever misnamed, add a small `EnemyType` to name override table. Do not build a new
-lookup path.
+The name helpers return **terms**, not text, so using them means taking on the localization
+assembly (`l2localization`) to resolve each one. Worth doing when the mod is translated. The
+term is included in the `[Data]` diagnostic line, so that switch can be made against real
+values rather than assumptions.
+
+`EnemyItemUI._Name.text` is already localized but only exists on the Bestiary menu page, not
+during a run.
+
+There **is** an enemy term namespace, contrary to what this document originally said:
+`GetLocalizedBestiaryNameTerm(BAT4)` returns `enemiesLang/{BAT4}bName`, composed from the enemy
+id. It is returned even for an enemy with no Bestiary record, so a term existing says nothing
+about whether it resolves to anything.
+
+## 6.1 Not every boss is a boss
+
+The game reuses its boss machinery for **stage hazards**. `BULLET_W`, the water that rises
+from the bottom of the screen, reports `IsBoss` true and got a plate showing HP nobody can
+act on.
+
+The Bestiary is the game's own answer to "is this a creature the player is meant to know
+about". A hazard is not catalogued; a real boss is. So the plate is gated on having a Bestiary
+record - a non-empty `bName` and not `bIgnore` - rather than on the boss flag alone. Config
+`RequireBestiaryEntry`, default on.
+
+**And `EnemyFactory._bossTypes` is not a list of bosses either.** A Mad Forest run showed
+`BAT4` going through the boss path with `bName='' xp=30 maxHp=5` - five hit points, an ordinary
+bat. The set is closer to "types the boss spawner is allowed to use", 198 of them. It is only
+useful for the mini-boss tier *combined* with the Bestiary test; on its own it would put a
+health bar over every bat in the forest.
+
+Worth noting that `bIgnore` was false for both `BULLET_W` and `BAT4`, so `bIgnore` alone is not
+the discriminator. An empty `bName` is.
+
+### 6.2 The best test is the chest
+
+`EnemyController._hasATreasure`, alongside `_treasure` and `AttachTreasure(Treasure)`.
+
+This is the signal every earlier rule was reaching for and missing. `FANGEL3` in the Chapel
+reads `bName='' xp=3 maxHp=15` - no Bestiary record, three experience, fifteen hit points.
+Nothing in its data marks it out at all, and it is still a mini-boss, because it drops a chest.
+
+**It is a property of the instance, not of the type.** The same enemy id is a mini-boss when
+the stage attached a chest to it and ordinary filler when it did not, so no type-based rule
+could ever have got this right. `EnemyData` carries no drop, chest, treasure or reward field of
+any kind - the whole set of its public fields was checked - which is why this had to be read
+off the controller.
+
+Checked before the type set and deliberately not restricted by it: a chest carrier qualifies
+whatever it is.
+
+One consequence for the reject memory. Whether an enemy carries a chest is decided by
+`AttachTreasure`, and nothing guarantees that has run by the time the enemy first appears in
+the stage's list. A scan landing in that gap would condemn a mini-boss permanently on the
+strength of a half-built object, so a first rejection is provisional and is re-judged once
+after 1.5 seconds. After that it stands.
+
+### 6.3 The other exception: bonus enemies
+
+`BAT4` is also the case that shows the Bestiary rule cannot be the whole story. It is the blue
+glowing bat, and a player chases it deliberately. Nothing structural keeps it: no Bestiary
+record, and five hit points, so no health-based test would either.
+
+What marks it is the reward - `xp=30` against one or two for filler. So `BonusXpThreshold`
+(default 25) admits an enemy on experience alone.
+
+**XP is the honest signal and health is not.** A bonus enemy is defined by being worth killing,
+not by being hard to kill. Health would have been the intuitive test and would have been wrong.
+
+Still bounded by the boss type set, so the exception can only admit one of those 198 types. It
+cannot start plating ordinary enemies late in a run once their XP has scaled up.
+
+Rejections are remembered, keyed on instance id **and** type. Without that the scan re-judges
+and re-logs every rejected enemy twice a second - the same forest run produced hundreds of
+identical `skipped BAT4` lines. The type is part of the key because instances are pooled: the
+same id returns later as a different enemy and deserves a fresh judgement. The plate cap is
+deliberately **not** remembered as a rejection, because it is a passing condition.
+
+Every registration logs a `[Data]` line under `DebugVerbose` carrying `bName`, `bInclude`,
+`bIgnore`, `bHighlight`, `bIndexNumber`, `bPlaces`, `xp`, `maxHp`, `flagName`, `textureName`
+and the localization term. If the rule ever hides a real boss, that line shows which field
+disagreed - the rule should be corrected from it, not re-guessed.
 
 ---
 

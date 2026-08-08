@@ -64,6 +64,27 @@ game ships.
 | `virtual void Die(WeaponType)`, `virtual void Kill(WeaponType)` | |
 | `static Action<EnemyController> OnKilledImmediate` | a real C# event; subscribable without Harmony |
 
+### Treasure, and how to tell a mini-boss
+
+| Member | Notes |
+|--------|-------|
+| `bool _hasATreasure` | **this enemy drops a chest** |
+| `Treasure _treasure` | the chest itself |
+| `void AttachTreasure(Treasure)` | how it is set, at or after spawn |
+| `virtual void GiveReward(Action<Pickup>, WeaponType)` | |
+| `void GiveFullReward(Action<Pickup>)` | |
+| `virtual void GiveCustomRewards()` | |
+
+`_hasATreasure` is **the** test for "is this a mini-boss". It is a property of the instance
+rather than of the type, so the same enemy id carries a chest on one spawn and not on another.
+
+**`EnemyData` has no drop, chest, treasure or reward field at all** - its entire public field
+set was checked. Chests are decided by whatever spawns the enemy, not by enemy data, so a
+type-based rule cannot answer this question.
+
+`AttachTreasure` is not guaranteed to have run when the enemy first appears in
+`Stage.SpawnedEnemies`, so re-check rather than judging once.
+
 ### Not present
 
 **No lives, phase, shield or invulnerability field exists on `EnemyController`.** A
@@ -134,10 +155,38 @@ Core: `maxHp`, `power`, `speed`, `xp`, `knockback`, `lives` (nullable), `shieldD
 Bestiary block: `bName`, `bDesc`, `bPlaces`, `bVariants`, `bIndexNumber`, `bInclude`,
 `bIgnore`, `bHighlight`, `bIncludeColorVariants`.
 
-**There is no localization helper for enemy names.** `WeaponData` has
-`GetLocalizedNameTerm(WeaponType)`; `EnemyData` has no equivalent, and there is no enemy or
-bestiary term namespace in the game's localization data. `bName` names a Bestiary **family**,
-so it is wrong on variant rows - the Bestiary page itself prefers the row's own label.
+Localization helpers, all taking an `EnemyType`: `GetLocalizedNameTerm`,
+`GetLocalizedBestiaryNameTerm` and `GetLocalizedTipsTerm` return **I2 terms**;
+`GetLocalizedDescription`, `GetLocalizedBestiaryDescription` and `GetLocalizedTips` return
+text. Resolving the terms needs the `l2localization` assembly.
+
+**There is an enemy term namespace, and it is `enemiesLang/`.** An earlier version of this file
+said there was none. Observed in game:
+
+```
+GetLocalizedBestiaryNameTerm(BAT4) -> "enemiesLang/{BAT4}bName"
+```
+
+So the term is composed from the enemy id, and it is returned even for an enemy with no
+Bestiary record at all - a term existing says nothing about whether it resolves to anything.
+
+`bName` names a Bestiary **family**, so it is wrong on variant rows - the Bestiary page itself
+prefers the row's own label.
+
+**`bName` is the practical test for "is this a real, catalogued enemy".** Two different things
+turn up in the boss machinery without one:
+
+- **Stage hazards.** `BULLET_W`, a rising wall of water, reports `IsBoss` true.
+- **Ordinary enemies that happen to be in the boss type set.** `BAT4` in Mad Forest reads
+  `bName='' bInclude=False bIgnore=False bIndex=0 bPlaces=0 xp=30 maxHp=5`. Five HP: an
+  ordinary bat, not a boss of any kind.
+
+Note that `bIgnore` was **false** in both cases, so `bIgnore` alone is not the discriminator -
+an empty `bName` is.
+
+`EnemyFactory._bossTypes` is therefore **not** a list of bosses. It is closer to "types the
+boss spawner is allowed to use", and it contains 198 entries including ordinary bats. Combine
+it with a Bestiary record if you want strong enemies rather than all enemies.
 
 ## Cameras
 
