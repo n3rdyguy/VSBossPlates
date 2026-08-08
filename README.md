@@ -6,7 +6,7 @@ While a boss is alive, a plate follows it showing a health bar, the boss name, a
 
 | | |
 |--|--|
-| **Latest release** | not yet released |
+| **Latest release** | [v0.1.0](https://github.com/n3rdyguy/VSBossPlates/releases/tag/v0.1.0) - development build |
 | **Game** | Vampire Survivors **1.15.x** (tested **1.15.114**), Unity **6000.0.62f1** |
 | **Loader** | [BepInEx 6 IL2CPP](https://builds.bepinex.dev/projects/bepinex_be) (BE / bleeding-edge) |
 
