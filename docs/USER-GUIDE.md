@@ -1,6 +1,6 @@
 # VS Boss Plates - user guide
 
-**Version 0.1.2** - Vampire Survivors 1.15.x and 1.16, BepInEx 6 IL2CPP.
+**Version 0.1.2** - Vampire Survivors 1.15.x and the 1.16 public beta, BepInEx 6 IL2CPP.
 
 ## 1. What this mod does
 
@@ -155,10 +155,11 @@ screen busy, it clears the clutter without giving up the plate on the boss that 
 
 ## 6. Compatibility
 
-- Built against **1.15.114** and also played on **1.16** with nothing out of place. The mod reads
-  the game's enemy data directly, so a game update that moved that data would break it loudly
-  rather than quietly: no plates at all, and a missing `Read N boss types from EnemyFactory` line
-  in the log
+- Built against **1.15.114**, and also played on the **1.16 public beta** with nothing out of
+  place. A beta is a moving target, so treat that as "it worked on the build I played" rather
+  than as a guarantee for 1.16 when it ships. The mod reads the game's enemy data directly, so a
+  game update that moved that data would break it loudly rather than quietly: no plates at all,
+  and a missing `Read N boss types from EnemyFactory` line in the log
 - Runs alongside **VS Evolution Helper**. Separate plugin, separate GUID, separate config
   file; neither knows about the other
 - **BepInEx 6 IL2CPP win-x64 only.** MelonLoader crashes on Unity 6 builds of the game, and
