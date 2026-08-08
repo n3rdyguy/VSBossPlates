@@ -1,0 +1,30 @@
+# Build outputs
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+
+# Local tooling / game dumps (large, machine-specific)
+.tools/
+*.dll
+
+# Local build archive and private working material
+storage/
+plan/
+scripts/
+
+# Release staging (binaries are attached to releases, not committed)
+dist/
+installer/dist/
+installer/dist-trim/
+installer/release/
+
+# IDE / OS
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Secrets
+*.env*

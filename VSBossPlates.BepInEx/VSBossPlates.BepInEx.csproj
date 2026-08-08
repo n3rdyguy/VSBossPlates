@@ -1,0 +1,99 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>VSBossPlates</AssemblyName>
+    <RootNamespace>VSBossPlates</RootNamespace>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GamePath>D:\SteamLibrary\steamapps\common\Vampire Survivors</GamePath>
+    <BepInExPath>$(GamePath)\BepInEx</BepInExPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BepInEx / Harmony / Il2CppInterop -->
+    <Reference Include="BepInEx.Core">
+      <HintPath>$(BepInExPath)\core\BepInEx.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx.Unity.IL2CPP">
+      <HintPath>$(BepInExPath)\core\BepInEx.Unity.IL2CPP.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx.Unity.Common">
+      <HintPath>$(BepInExPath)\core\BepInEx.Unity.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExPath)\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(BepInExPath)\core\Il2CppInterop.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Common">
+      <HintPath>$(BepInExPath)\core\Il2CppInterop.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Game interop. EnemyController and every boss subclass live in
+         VampireSurvivors.Runtime, not Assembly-CSharp - see game-api/README.md. -->
+    <Reference Include="Il2Cppmscorlib">
+      <HintPath>$(BepInExPath)\interop\Il2Cppmscorlib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppSystem">
+      <HintPath>$(BepInExPath)\interop\Il2CppSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VampireSurvivors.Runtime">
+      <HintPath>$(BepInExPath)\interop\VampireSurvivors.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- EnemyController derives from BasePoolableSpriteBehaviour, whose own base chain
+         reaches types in these two. -->
+    <Reference Include="PhaserPort">
+      <HintPath>$(BepInExPath)\interop\PhaserPort.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="PauseSystem">
+      <HintPath>$(BepInExPath)\interop\PauseSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Required by types in the Objects namespace whose base is ArcadeSprite. -->
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(BepInExPath)\interop\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Unity. The plate is a world-space Canvas with Images and TextMeshPro. -->
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(BepInExPath)\interop\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(BepInExPath)\interop\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(BepInExPath)\interop\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(BepInExPath)\interop\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(BepInExPath)\interop\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(BepInExPath)\interop\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

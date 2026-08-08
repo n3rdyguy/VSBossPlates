@@ -1,0 +1,301 @@
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using VampireSurvivors.Objects.Characters;
+using Object = UnityEngine.Object;
+
+namespace VSBossPlates;
+
+/// <summary>
+/// One health plate: background, fill bar, name and HP numbers.
+///
+/// The plate is a world-space Canvas, not a screen-space one, and that is the single most
+/// consequential decision in the mod. The obvious approach - a screen overlay positioned with
+/// Camera.WorldToScreenPoint - does not survive contact with this game, because the game
+/// renders through a render texture. CameraExtensions carries GetRtZoomScaling() and
+/// GetRenderTextureSize() precisely because of it, so WorldToScreenPoint returns coordinates
+/// in render-texture space rather than backbuffer space, and every window resize and camera
+/// zoom would need that conversion redone. A world-space canvas is drawn by the gameplay
+/// camera in the same pass as the sprites, so it tracks zoom and resolution for nothing.
+///
+/// The plate is deliberately NOT parented to the enemy. Pooled enemies are deactivated and
+/// reused rather than destroyed, so a child plate would be deactivated with its boss, sit
+/// dormant in the pool, and reappear over whatever enemy that instance became next.
+/// </summary>
+internal sealed class BossPlate
+{
+    // Canvas units. Multiplied by Plugin.PlateScale to reach world units.
+    private const float PlateWidth = 200f;
+    private const float PlateHeight = 56f;
+    private const float BarHeightFraction = 0.42f;
+    private const float BarInset = 2f;
+
+    private GameObject _root;
+    private RectTransform _fill;
+    private TextMeshProUGUI _nameText;
+    private TextMeshProUGUI _hpText;
+    private bool _visible = true;
+
+    private static Sprite _whiteSprite;
+    private static TMP_FontAsset _font;
+    private static bool _warnedNoFont;
+
+    internal static BossPlate Create(EnemyController enemy, string displayName)
+    {
+        try
+        {
+            Camera cam = ResolveCamera(enemy);
+
+            var plate = new BossPlate();
+            plate.Build(enemy, displayName, cam);
+            return plate._root == null ? null : plate;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.LogWarning("Could not build boss plate: " + ex.Message);
+            return null;
+        }
+    }
+
+    private void Build(EnemyController enemy, string displayName, Camera cam)
+    {
+        _root = new GameObject("VSBossPlate");
+        Canvas canvas = _root.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        canvas.worldCamera = cam;
+        // Above the sprites the gameplay camera draws, but well below anything the game's own
+        // screen-space UI uses, so a plate can never cover the pause menu.
+        canvas.sortingOrder = 500;
+
+        // The enemy's layer is guaranteed to be in the gameplay camera's culling mask; a
+        // default-layer canvas is not.
+        try { _root.layer = enemy.gameObject.layer; } catch { }
+
+        var rootRect = _root.GetComponent<RectTransform>();
+        rootRect.sizeDelta = new Vector2(PlateWidth, PlateHeight);
+        rootRect.localScale = Vector3.one * Plugin.PlateScale;
+        rootRect.rotation = Quaternion.identity;
+
+        Sprite white = GetWhiteSprite();
+
+        // Bar background doubles as the border: the fill is inset inside it on all sides.
+        GameObject barGo = NewChild(_root.transform, "Bar");
+        var barRect = barGo.GetComponent<RectTransform>();
+        barRect.anchorMin = new Vector2(0f, 0f);
+        barRect.anchorMax = new Vector2(1f, BarHeightFraction);
+        barRect.offsetMin = Vector2.zero;
+        barRect.offsetMax = Vector2.zero;
+        Image barImage = barGo.AddComponent<Image>();
+        barImage.sprite = white;
+        ((Graphic)barImage).color = new Color(0.05f, 0.05f, 0.06f, 0.85f);
+        ((Graphic)barImage).raycastTarget = false;
+
+        GameObject fillGo = NewChild(barGo.transform, "Fill");
+        _fill = fillGo.GetComponent<RectTransform>();
+        _fill.anchorMin = new Vector2(0f, 0f);
+        _fill.anchorMax = new Vector2(1f, 1f);
+        _fill.offsetMin = new Vector2(BarInset, BarInset);
+        _fill.offsetMax = new Vector2(-BarInset, -BarInset);
+        Image fillImage = fillGo.AddComponent<Image>();
+        fillImage.sprite = white;
+        ((Graphic)fillImage).color = new Color(0.78f, 0.13f, 0.16f, 1f);
+        ((Graphic)fillImage).raycastTarget = false;
+
+        TMP_FontAsset font = GetFont();
+
+        if (Plugin.ShowName)
+        {
+            _nameText = AddText(
+                _root.transform, "Name", displayName, font, 22f,
+                new Color(1f, 1f, 1f, 1f), TextAlignmentOptions.Bottom,
+                new Vector2(0f, BarHeightFraction), new Vector2(1f, 1f));
+        }
+
+        if (Plugin.ShowNumbers)
+        {
+            _hpText = AddText(
+                barGo.transform, "Hp", "", font, 16f,
+                new Color(1f, 1f, 1f, 0.95f), TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one);
+        }
+    }
+
+    /// <summary>
+    /// Camera resolution is deliberately lazy and defensive. EnemyController caches its own
+    /// MainCamera, which is the cheapest handle available, but nothing in the interop
+    /// assemblies says whether it is populated by the time a spawn hook fires - the
+    /// assemblies carry no method bodies. Camera.main is the fallback rather than the first
+    /// choice because it is a tagged lookup.
+    /// </summary>
+    private static Camera ResolveCamera(EnemyController enemy)
+    {
+        try
+        {
+            Camera cam = enemy.MainCamera;
+            if ((Object)(object)cam != (Object)null) return cam;
+        }
+        catch { }
+
+        return Camera.main;
+    }
+
+    internal void Refresh(float fraction, float current, float max)
+    {
+        if (_root == null) return;
+
+        // Width is driven by the anchor rather than Image.fillAmount so the bar does not
+        // depend on a sprite being sliced or on Image.type surviving a null sprite.
+        if (_fill != null)
+        {
+            Vector2 anchorMax = _fill.anchorMax;
+            anchorMax.x = fraction;
+            _fill.anchorMax = anchorMax;
+            _fill.offsetMin = new Vector2(BarInset, BarInset);
+            _fill.offsetMax = new Vector2(-BarInset, -BarInset);
+        }
+
+        if (_hpText != null)
+        {
+            ((TMP_Text)_hpText).text = FormatHp(current) + " / " + FormatHp(max);
+        }
+    }
+
+    /// <summary>
+    /// Sits on top of the sprite's own bounds rather than at a fixed height above the
+    /// transform origin, because bosses differ enormously in size and a fixed offset either
+    /// overlaps the small ones or floats far above the large ones.
+    /// </summary>
+    internal void PositionAbove(EnemyController enemy)
+    {
+        if (_root == null) return;
+
+        Vector3 basePos;
+        try { basePos = enemy.transform.position; }
+        catch { return; }
+
+        float top = basePos.y;
+        try
+        {
+            SpriteRenderer renderer = enemy.EnemyRenderer;
+            if ((Object)(object)renderer != (Object)null && renderer.enabled)
+            {
+                top = renderer.bounds.max.y;
+            }
+        }
+        catch { }
+
+        float halfPlate = PlateHeight * 0.5f * Plugin.PlateScale;
+        _root.transform.position = new Vector3(
+            basePos.x,
+            top + Plugin.VerticalOffset + halfPlate,
+            basePos.z);
+        _root.transform.rotation = Quaternion.identity;
+        _root.transform.localScale = Vector3.one * Plugin.PlateScale;
+    }
+
+    internal void SetVisible(bool visible)
+    {
+        if (_root == null || _visible == visible) return;
+        _visible = visible;
+        _root.SetActive(visible);
+    }
+
+    internal void Destroy()
+    {
+        if (_root == null) return;
+        try { Object.Destroy(_root); }
+        catch { }
+        _root = null;
+        _fill = null;
+        _nameText = null;
+        _hpText = null;
+    }
+
+    private static string FormatHp(float value)
+    {
+        if (value >= 1000000f) return (value / 1000000f).ToString("0.#") + "M";
+        if (value >= 10000f) return (value / 1000f).ToString("0.#") + "k";
+        return Mathf.Max(0f, value).ToString("0");
+    }
+
+    private static GameObject NewChild(Transform parent, string name)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.AddComponent<RectTransform>();
+        return go;
+    }
+
+    private static TextMeshProUGUI AddText(
+        Transform parent, string name, string text, TMP_FontAsset font, float size,
+        Color color, TextAlignmentOptions align, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        if (font == null) return null;
+
+        GameObject go = NewChild(parent, name);
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+        ((TMP_Text)tmp).font = font;
+        ((TMP_Text)tmp).text = text ?? "";
+        ((TMP_Text)tmp).fontSize = size;
+        ((TMP_Text)tmp).alignment = align;
+        ((TMP_Text)tmp).enableWordWrapping = false;
+        ((TMP_Text)tmp).overflowMode = TextOverflowModes.Overflow;
+        ((TMP_Text)tmp).richText = false;
+        ((Graphic)tmp).color = color;
+        ((Graphic)tmp).raycastTarget = false;
+        return tmp;
+    }
+
+    /// <summary>
+    /// Borrows a font from whatever TMP text is already on screen rather than loading one.
+    /// This is how the Evolution Helper mod does it, and it has the useful side effect that
+    /// the plate is drawn in the game's own font instead of an Arial fallback.
+    /// </summary>
+    private static TMP_FontAsset GetFont()
+    {
+        if (_font != null) return _font;
+
+        try
+        {
+            TextMeshProUGUI any = Object.FindObjectOfType<TextMeshProUGUI>();
+            if ((Object)(object)any != (Object)null) _font = ((TMP_Text)any).font;
+        }
+        catch { }
+
+        if (_font == null && !_warnedNoFont)
+        {
+            _warnedNoFont = true;
+            Plugin.Log.LogWarning(
+                "No TextMeshPro font found in the scene - plates will draw the bar only.");
+        }
+
+        return _font;
+    }
+
+    /// <summary>
+    /// A 1x1 white sprite shared by every plate. Image renders without a sprite, but the
+    /// behaviour depends on the UI default material being present, and an explicit sprite
+    /// costs four bytes and removes the question.
+    /// </summary>
+    private static Sprite GetWhiteSprite()
+    {
+        if ((Object)(object)_whiteSprite != (Object)null) return _whiteSprite;
+
+        var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        texture.SetPixel(0, 0, Color.white);
+        texture.Apply();
+        texture.hideFlags = HideFlags.HideAndDontSave;
+
+        _whiteSprite = Sprite.Create(
+            texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+        _whiteSprite.hideFlags = HideFlags.HideAndDontSave;
+        return _whiteSprite;
+    }
+}
