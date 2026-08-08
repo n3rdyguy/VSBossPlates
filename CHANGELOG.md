@@ -2,6 +2,52 @@
 
 All notable changes to VS Boss Plates are listed here.
 
+## [0.1.1] - 2026-08-08
+
+Still a development build. This release is what a day of actually playing with 0.1.0 turned up.
+
+### Fixed
+- **Ordinary enemies were getting plates.** The Tower's Scarleton has two hit points, and it was
+  being plated, killed instantly, and handed straight back out of the enemy pool as another one.
+  It slipped through because it is in the game's boss type set *and* it is in the Bestiary - and
+  the Bestiary separates hazards from creatures, not filler from bosses. There is now a base
+  health floor on that route, `MiniBossMinHp`, default 20.
+- **A boss could lose its plate for its whole life if its chest arrived late.** Whether an enemy
+  carries a treasure is decided by the game after the enemy appears, and the mod gave it 1.5
+  seconds and one look before deciding permanently. It now gets ten seconds and five looks. The
+  cost of being wrong was lopsided: rechecking an ordinary enemy is one cheap read, while a
+  mini-boss judged too early never gets a plate at all.
+- **Plate text sat high in its box.** TextMeshPro centres on the full line box, ascender and
+  descender included, and the game's font has a tall ascent with almost nothing below the
+  baseline in these strings. It now centres on the glyphs.
+- **The scan registered enemies that validation dropped on the same tick**, forever - one
+  inactive enemy produced 147 register/drop pairs in a single run. The two paths now share one
+  check rather than each having their own.
+- HP numbers used the system's decimal separator, so `1.8M` rendered as `1,8M` on a Danish
+  machine. Invariant everywhere now.
+- The two halves of the HP pair scaled independently, so an untouched boss could read
+  `393k / 393.2k`. One unit is chosen from the maximum and applied to both.
+
+### Added
+- **`MiniBossPlateScale`.** Mini-boss plates are drawn smaller than boss plates, and separately
+  configurable. There are many more of them and none is the thing you are actually worried about.
+- **`MiniBossMinHp`.** How much base health an enemy needs before belonging to the game's boss
+  type set is enough on its own. Does not apply to stage bosses, chest carriers or bonus enemies,
+  which qualify on their own.
+- **An installer**, for Windows, Linux and both Mac architectures. It will not remove BepInEx
+  while other mods are using it, which the installer it was forked from does with only a warning.
+- The log now says *why* an enemy was kept or skipped, in both directions.
+
+### Notes
+- The four ways an enemy can earn a plate are alternatives, not a chain of gates, and that
+  ordering matters more than it looks. An earlier cut of the health floor sat in front of the
+  experience rule and would have silently dropped the blue glowing bat - five base hit points -
+  along with `BOSS_HARPY` and `BOSS_SKULL2`, which are also five and are carried entirely by the
+  chest rule.
+- `xp=0` alongside an enormous `maxHp` turns out to be the clearest hazard signature in the data:
+  `BULLET_W` reads 65535, `BOSS_XLLEDA` reads 8888. Both are correctly excluded today by the
+  Bestiary rule; this is held in reserve.
+
 ## [0.1.0] - 2026-08-08
 
 First release. **Development build** - the mod works and has been played, but it has been

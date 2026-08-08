@@ -7,7 +7,7 @@ Two forms, same behaviour - pick whichever you trust more:
 
 | | |
 |--|--|
-| **Binary** | `vsevolutionhelper-installer` - no runtime to install, one file |
+| **Binary** | `vsbossplates-installer` - no runtime to install, one file |
 | **Script** | `install.ps1` (Windows) / `install.sh` (macOS, Linux) - readable before you run it |
 
 ## Just run it
@@ -47,12 +47,12 @@ PowerShell* otherwise closes it the instant the script finishes.
 
 ```bash
 # Windows
-vsevolutionhelper-installer.exe --uninstall
+vsbossplates-installer.exe --uninstall
 powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall
 
 # macOS / Linux
-chmod +x vsevolutionhelper-installer install.sh
-./vsevolutionhelper-installer
+chmod +x vsbossplates-installer install.sh
+./vsbossplates-installer
 ./install.sh
 ```
 
@@ -81,8 +81,8 @@ PowerShell uses the same names as switches: `-Game`, `-BepInEx`, `-Mod`, `-Lates
 ## Uninstalling
 
 ```bash
-./vsevolutionhelper-installer --uninstall           # mod only, BepInEx stays
-./vsevolutionhelper-installer --uninstall --all     # mod + BepInEx
+./vsbossplates-installer --uninstall           # mod only, BepInEx stays
+./vsbossplates-installer --uninstall --all     # mod + BepInEx
 ./install.ps1 -Uninstall -All
 ./install.sh --uninstall --all
 ```

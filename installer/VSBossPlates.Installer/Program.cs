@@ -43,7 +43,7 @@ internal static class Program
             {
                 Fail("Could not find Vampire Survivors.");
                 Info("Pass the folder explicitly:");
-                Info("    vsevolutionhelper-installer --game \"<path to Vampire Survivors>\"");
+                Info("    vsbossplates-installer --game \"<path to Vampire Survivors>\"");
                 return 2;
             }
 

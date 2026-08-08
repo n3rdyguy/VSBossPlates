@@ -1,12 +1,12 @@
 # VS Boss Plates
 
-**Version 0.1.0** - Health plates above bosses for **Vampire Survivors** on Unity 6 / BepInEx IL2CPP.
+**Version 0.1.1** - Health plates above bosses for **Vampire Survivors** on Unity 6 / BepInEx IL2CPP.
 
 While a boss is alive, a plate follows it showing a health bar, the boss name, and current/max HP. The game itself never tells you how much health a boss has left, or even which boss you are fighting.
 
 | | |
 |--|--|
-| **Latest release** | [v0.1.0](https://github.com/n3rdyguy/VSBossPlates/releases/tag/v0.1.0) - development build |
+| **Latest release** | [v0.1.1](https://github.com/n3rdyguy/VSBossPlates/releases/tag/v0.1.1) - development build |
 | **Game** | Vampire Survivors **1.15.x** (tested **1.15.114**), Unity **6000.0.62f1** |
 | **Loader** | [BepInEx 6 IL2CPP](https://builds.bepinex.dev/projects/bepinex_be) (BE / bleeding-edge) |
 
@@ -59,7 +59,7 @@ BepInEx 6 has no stable release. Bleeding-edge *is* the correct channel here, no
 ## Expected log lines
 
 ```
-[Info: VS Boss Plates] VS Boss Plates 0.1.0 loading...
+[Info: VS Boss Plates] VS Boss Plates 0.1.1 loading...
 [Info: VS Boss Plates] Plates: Enabled=True ShowName=True ShowNumbers=True ...
 [Info: VS Boss Plates] VS Boss Plates initialized.
 ```

@@ -1,6 +1,6 @@
 # VS Boss Plates - user guide
 
-**Version 0.1.0** - Vampire Survivors 1.15.x, BepInEx 6 IL2CPP.
+**Version 0.1.1** - Vampire Survivors 1.15.x, BepInEx 6 IL2CPP.
 
 ## 1. What this mod does
 
@@ -164,7 +164,7 @@ screen busy, it clears the clutter without giving up the plate on the boss that 
 ## 7. Troubleshooting
 
 **No plate appears at all.** Check `BepInEx/LogOutput.log` for
-`VS Boss Plates 0.1.0 loading...`. If that line is missing the plugin is not being loaded -
+`VS Boss Plates 0.1.1 loading...`. If that line is missing the plugin is not being loaded -
 check the DLL is at `BepInEx/plugins/VSBossPlates/VSBossPlates.dll` and that BepInEx is the
 IL2CPP build. If the line is present but you also see
 `No boss spawn hooks patched`, the game has been updated in a way that moved the API the mod
