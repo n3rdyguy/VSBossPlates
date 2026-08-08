@@ -28,3 +28,4 @@ Desktop.ini
 
 # Secrets
 *.env*
+AG*.m*
