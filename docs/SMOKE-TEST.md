@@ -75,7 +75,22 @@ builds move, so a pass against one is worth re-running when 1.16 ships.
 ## Release package
 
 - [ ] Zip contains `VSBossPlates.dll`, `README.md`, `CHANGELOG.md`
-- [ ] Zip is 0 detections on VirusTotal
-- [ ] Release carries the full asset set: mod zip, all four installers, `SHA256SUMS.txt`
+- [ ] Zip is 0 detections on VirusTotal, scanned **now**, not quoted from an archive note
+- [ ] Release carries the full asset set: mod zip, all four installers **zipped**, `SHA256SUMS.txt`
 - [ ] Release notes carry install instructions, the VirusTotal table, and the changelog excerpt
+- [ ] Every version claim in the notes matches the docs, and a beta is named as a beta
 - [ ] The release is marked **Latest**, or every installer in the wild breaks
+
+## After publishing, from outside
+
+Everything above is done while authenticated, so none of it proves a stranger can reach the
+release. 0.1.2 was published complete into a private repo and was invisible to every installer.
+
+- [ ] The repo is **public**: `"private": false`
+- [ ] `api.github.com/repos/n3rdyguy/VSBossPlates/releases/latest` returns **200 unauthenticated**
+- [ ] The installer's own regex resolves to the **mod zip**, not to an installer zip - every
+      `.zip` asset matches its pattern, so this is a real failure mode and not a formality
+- [ ] All assets download anonymously (HTTP 200 each)
+- [ ] The anonymously downloaded zip's sha256 matches `SHA256SUMS.txt`, and the DLL inside it
+      matches the md5 of the archived build that was actually play-tested
+- [ ] `README.md`'s release link resolves
