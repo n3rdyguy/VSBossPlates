@@ -102,6 +102,7 @@ the mod installed. Edit it with the game closed.
 | `MaxPlates` | `12` | Most plates on screen at once |
 | `RequireBestiaryEntry` | `true` | Only draw a plate for a boss the Bestiary knows about, so stage hazards are skipped |
 | `BonusXpThreshold` | `25` | Also plate an enemy worth at least this much experience, Bestiary entry or not. Set to `0` to turn the exception off. Range 0 to 10000 |
+| `MiniBossMinHp` | `20` | How much base health an enemy needs before belonging to the game's boss type set is enough on its own. Does not apply to stage bosses, chest carriers or bonus enemies. Range 0 to 10000 |
 | `VerticalOffset` | `0.35` | Extra gap in world units between the top of the boss sprite and the plate. The plate already sits above the sprite, so this is a nudge rather than the whole distance. Range -2 to 5 |
 | `PlateScale` | `0.008` | How large a boss plate is drawn. See the table below. Range 0.001 to 0.03 |
 | `MiniBossPlateScale` | `0.005` | The same for mini-bosses, chest carriers and bonus enemies. Range 0.001 to 0.03 |

@@ -39,6 +39,7 @@ public class Plugin : BasePlugin
     internal static bool IncludeTreasureCarriers;
     internal static int MaxPlates;
     internal static int BonusXpThreshold;
+    internal static float MiniBossMinHp;
     internal static float VerticalOffset;
     internal static float PlateScale;
     internal static float MiniBossPlateScale;
@@ -57,6 +58,7 @@ public class Plugin : BasePlugin
     private ConfigEntry<bool> _requireBestiaryEntry;
     private ConfigEntry<int> _maxPlates;
     private ConfigEntry<int> _bonusXpThreshold;
+    private ConfigEntry<float> _miniBossMinHp;
     private ConfigEntry<bool> _includeTreasureCarriers;
     private ConfigEntry<string> _togglePlatesKey;
     private ConfigEntry<string> _toggleMiniBossesKey;
@@ -135,6 +137,20 @@ public class Plugin : BasePlugin
                 "Mad Forest: no Bestiary entry and five hit points, but thirty experience " +
                 "where an ordinary enemy gives one or two. Set to 0 to turn the exception off.",
                 new AcceptableValueRange<int>(0, 10000)));
+
+        _miniBossMinHp = Config.Bind(
+            "Plates",
+            "MiniBossMinHp",
+            20f,
+            new ConfigDescription(
+                "How much base health an enemy needs before being in the game's boss type set " +
+                "earns it a plate. That set contains ordinary enemies - the Tower's Scarleton " +
+                "is in it and has two hit points - and the Bestiary does not tell them apart, " +
+                "because ordinary enemies are catalogued too. This is health from the enemy's " +
+                "data rather than from the live enemy, so it means the same thing at minute " +
+                "two and at minute twenty. Does not apply to stage bosses, chest carriers or " +
+                "bonus enemies; those qualify on their own.",
+                new AcceptableValueRange<float>(0f, 10000f)));
 
         _requireBestiaryEntry = Config.Bind(
             "Plates",
@@ -219,7 +235,7 @@ public class Plugin : BasePlugin
             $"Plates: Enabled={Enabled} ShowName={ShowName} ShowNumbers={ShowNumbers} " +
             $"HideWhenFull={HideWhenFull} IncludeMiniBosses={IncludeMiniBosses} " +
             $"MaxPlates={MaxPlates} RequireBestiaryEntry={RequireBestiaryEntry} " +
-            $"BonusXpThreshold={BonusXpThreshold} " +
+            $"BonusXpThreshold={BonusXpThreshold} MiniBossMinHp={MiniBossMinHp:0} " +
             $"IncludeTreasureCarriers={IncludeTreasureCarriers} " +
             $"VerticalOffset={VerticalOffset:0.##} " +
             $"PlateScale={PlateScale:0.####} MiniBossPlateScale={MiniBossPlateScale:0.####} " +
@@ -250,6 +266,7 @@ public class Plugin : BasePlugin
         IncludeTreasureCarriers = _includeTreasureCarriers.Value;
         MaxPlates = Mathf.Clamp(_maxPlates.Value, 1, 60);
         BonusXpThreshold = Mathf.Clamp(_bonusXpThreshold.Value, 0, 10000);
+        MiniBossMinHp = Mathf.Clamp(_miniBossMinHp.Value, 0f, 10000f);
         VerticalOffset = _verticalOffset.Value;
         PlateScale = Mathf.Clamp(_plateScale.Value, 0.001f, 0.03f);
         MiniBossPlateScale = Mathf.Clamp(_miniBossPlateScale.Value, 0.001f, 0.03f);

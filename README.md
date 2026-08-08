@@ -47,6 +47,7 @@ BepInEx 6 has no stable release. Bleeding-edge *is* the correct channel here, no
 | Plates | `MaxPlates` | `12` | Most plates on screen at once |
 | Plates | `RequireBestiaryEntry` | `true` | Only plate bosses the Bestiary knows about, so stage hazards are skipped |
 | Plates | `BonusXpThreshold` | `25` | Also plate an enemy worth at least this much XP, Bestiary entry or not. `0` turns it off |
+| Plates | `MiniBossMinHp` | `20` | Base health an enemy needs before the boss type set alone earns it a plate |
 | Plates | `VerticalOffset` | `0.35` | Extra gap in world units above the boss sprite |
 | Plates | `PlateScale` | `0.008` | Boss plate size. `0.004` discreet, `0.008` hard to miss, `0.012` theatrical. Small is also blurry |
 | Plates | `MiniBossPlateScale` | `0.005` | The same for mini-bosses, chest carriers and bonus enemies |

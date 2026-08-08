@@ -107,6 +107,14 @@ internal static class BossRegistry
     /// <summary>Bound on the reject memory. Enemy instances are pooled, so the set of ids is
     /// naturally small, but a long run should not be able to grow this without limit.</summary>
     private const int MaxRejectMemory = 4096;
+
+    /// <summary>
+    /// Instances whose data profile has already been logged, so [Data] appears once per enemy
+    /// rather than once per registration. A short-lived enemy that dies and is handed straight
+    /// back out of the pool re-registers every scan, and printing its whole profile each time
+    /// buried everything else in the log.
+    /// </summary>
+    private static readonly Dictionary<int, EnemyType> Profiled = new Dictionary<int, EnemyType>();
     private static float _nextScan;
     private static bool _warnedNoStage;
     private static bool _warnedPlateCap;
@@ -217,7 +225,12 @@ internal static class BossRegistry
                 return;
             }
 
-            if (prior.Count == 0) LogDataProfile(enemy);
+            if (!Profiled.TryGetValue(id, out EnemyType profiledAs) || profiledAs != type)
+            {
+                if (Profiled.Count >= MaxRejectMemory) Profiled.Clear();
+                Profiled[id] = type;
+                LogDataProfile(enemy);
+            }
 
             if (Plugin.RequireBestiaryEntry && !HasBestiaryEntry(enemy))
             {
@@ -318,6 +331,7 @@ internal static class BossRegistry
             Drop(Tracked[i], i);
         }
         Rejected.Clear();
+        Profiled.Clear();
         _warnedPlateCap = false;
     }
 
@@ -553,11 +567,42 @@ internal static class BossRegistry
 
         try
         {
-            return GameAccess.IsBossType(enemy.EnemyType);
+            if (!GameAccess.IsBossType(enemy.EnemyType)) return false;
         }
         catch
         {
             return false;
+        }
+
+        // Being in the boss type set is not enough on its own, and the Bestiary test does not
+        // help here either.
+        //
+        // SKELANGUE in the Tower is in the set, and it is catalogued - bName 'Scarleton' - so
+        // both earlier rules waved it through. It has two hit points. It was getting a plate,
+        // dying instantly, and coming straight back out of the pool as another one, which is
+        // where the register/drop churn in the log came from. The Bestiary filters hazards,
+        // not filler; ordinary enemies are catalogued too.
+        //
+        // Base health is the honest separator. Filler sits in the low single digits - two for
+        // SKELANGUE, five for BAT4 - while the weakest thing the game actually calls a boss is
+        // an order of magnitude above that.
+        return ReadBaseHp(enemy) >= Plugin.MiniBossMinHp;
+    }
+
+    /// <summary>
+    /// Health from the enemy's data, not from the live instance. That is the value before the
+    /// run scales it, so the threshold means the same thing at minute two and minute twenty.
+    /// </summary>
+    private static float ReadBaseHp(EnemyController enemy)
+    {
+        try
+        {
+            var data = enemy.CurrentEnemyData;
+            return data == null ? 0f : data.maxHp;
+        }
+        catch
+        {
+            return 0f;
         }
     }
 
