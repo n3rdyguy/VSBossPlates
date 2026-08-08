@@ -66,8 +66,8 @@ function Write-Banner {
     )
     Write-Host ''
     foreach ($line in $bat) { Write-Host $line -ForegroundColor DarkRed }
-    Write-Host '   V S   E V O L U T I O N   H E L P E R' -ForegroundColor White
-    Write-Host '   ~ it is a night of tooltips ~' -ForegroundColor Magenta
+    Write-Host '   V S   B O S S   P L A T E S' -ForegroundColor White
+    Write-Host '   ~ it is a night of health bars ~' -ForegroundColor Magenta
     Write-Host ''
 }
 
@@ -174,7 +174,9 @@ function Get-Mod {
     Step ("Downloading VS Boss Plates" + $(if ($Version) { " $Version" } else { ' (latest)' }) + '...')
     try {
         $rel = Invoke-RestMethod -Uri $api -Headers @{ 'User-Agent' = 'VSBossPlates-Installer' }
-        $asset = $rel.assets | Where-Object { $_.name -like '*VSBossPlates*.zip' } | Select-Object -First 1
+        # Anchored to the mod zip's own name. '*VSBossPlates*.zip' also matches the installer
+        # zips attached to the same release, and -First 1 would then take whichever came first.
+        $asset = $rel.assets | Where-Object { $_.name -like 'VSBossPlates-[0-9]*.zip' } | Select-Object -First 1
         if (-not $asset) { Fail 'No release asset found.'; return $null }
         Info $asset.browser_download_url
 

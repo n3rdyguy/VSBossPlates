@@ -82,8 +82,8 @@ banner() {
   printf '%s       `.       (  )        ,'"'"'%s\n' "$C_RED" "$C_OFF"
   printf '%s         `-._  _)  ) ___,-'"'"'%s\n'   "$C_RED" "$C_OFF"
   printf '%s             ``   ``%s\n'            "$C_RED" "$C_OFF"
-  printf '%s   V S   E V O L U T I O N   H E L P E R%s\n' "$C_BLD" "$C_OFF"
-  printf '%s   ~ it is a night of tooltips ~%s\n\n'       "$C_MAG" "$C_OFF"
+  printf '%s   V S   B O S S   P L A T E S%s\n'           "$C_BLD" "$C_OFF"
+  printf '%s   ~ it is a night of health bars ~%s\n\n'    "$C_MAG" "$C_OFF"
 }
 
 confirm() {
@@ -204,7 +204,7 @@ download_mod() {
   if [ -z "$json" ]; then fail "Could not reach GitHub." >&2; return 1; fi
 
   url=$(printf '%s' "$json" \
-    | grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*VSBossPlates[^"]*\.zip"' \
+    | grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*/VSBossPlates-[0-9][^"]*\.zip"' \
     | sed 's/.*"\(https[^"]*\)"/\1/' | head -n1 || true)
   if [ -z "$url" ]; then fail "No release asset found." >&2; return 1; fi
   info "$url" >&2

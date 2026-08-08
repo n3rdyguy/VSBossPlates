@@ -751,8 +751,13 @@ internal static class Program
 
             string json = http.GetStringAsync(api).GetAwaiter().GetResult();
 
+            // Anchored to the file name, not merely to the string "VSBossPlates" somewhere in
+            // the URL: the repo path contains that too, so a looser pattern matches every zip on
+            // the release - the installer zips included - and then takes whichever one the API
+            // happens to list first. Requiring "/VSBossPlates-" followed by a digit matches the
+            // mod zip and nothing else.
             var asset = Regex.Match(json,
-                "\"browser_download_url\"\\s*:\\s*\"([^\"]+VSBossPlates[^\"]*\\.zip)\"",
+                "\"browser_download_url\"\\s*:\\s*\"([^\"]+/VSBossPlates-[0-9][^\"]*\\.zip)\"",
                 RegexOptions.IgnoreCase);
             if (!asset.Success)
             {
@@ -902,8 +907,8 @@ internal static class Program
 
         Console.WriteLine();
         foreach (string line in bat) PaintLine(line, ConsoleColor.DarkRed);
-        PaintLine(@"   V S   E V O L U T I O N   H E L P E R", ConsoleColor.White);
-        PaintLine(@"   ~ it is a night of tooltips ~", ConsoleColor.Magenta);
+        PaintLine(@"   V S   B O S S   P L A T E S", ConsoleColor.White);
+        PaintLine(@"   ~ it is a night of health bars ~", ConsoleColor.Magenta);
         Console.WriteLine();
     }
 }
