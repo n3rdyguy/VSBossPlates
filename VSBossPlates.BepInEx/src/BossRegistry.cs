@@ -89,8 +89,20 @@ internal static class BossRegistry
     /// </summary>
     private static readonly Dictionary<int, Rejection> Rejected = new Dictionary<int, Rejection>();
 
-    private const float RejectRecheckDelay = 1.5f;
-    private const int RejectAttempts = 2;
+    /// <summary>
+    /// How long a rejection stays provisional, and how many times it is revisited.
+    ///
+    /// Started at one recheck after 1.5 seconds, which assumed AttachTreasure runs almost
+    /// immediately after an enemy appears in the stage's list. Nothing guarantees that, and the
+    /// cost of being wrong is asymmetric: a chest carrier condemned inside that window never
+    /// gets a plate for its whole life, while a rejected ordinary enemy costs one cheap read
+    /// every couple of seconds. Ten seconds of grace, five looks.
+    ///
+    /// Only the first look logs. Repeating "skipped FANGEL3" five times per enemy would undo
+    /// the point of having a reject memory at all.
+    /// </summary>
+    private const float RejectRecheckDelay = 2f;
+    private const int RejectAttempts = 5;
 
     /// <summary>Bound on the reject memory. Enemy instances are pooled, so the set of ids is
     /// naturally small, but a long run should not be able to grow this without limit.</summary>
@@ -219,8 +231,14 @@ internal static class BossRegistry
                 }
                 else
                 {
+                    bool first = prior.Count == 0;
                     Reject(id, type);
-                    Plugin.Dbg($"skipped {type} - no Bestiary entry, no chest, not worth enough xp");
+                    if (first)
+                    {
+                        Plugin.Dbg(
+                            $"skipped {type} - no Bestiary entry, no chest, not worth enough xp " +
+                            $"(will look again for {RejectRecheckDelay * RejectAttempts:0}s)");
+                    }
                     return;
                 }
             }
