@@ -6,10 +6,11 @@ not visible in the interop assemblies.
 
 Verified against Vampire Survivors **1.15.114**, Unity **6000.0.62f1**, BepInEx 6 **be.785**.
 
-Also played on the **1.16 public beta** with no problems observed. Everything below was
-established against 1.15.114 and the dumps have not been regenerated since, so treat 1.16 as "the
-enemy API did not move far enough to break this", not as re-verified. Re-dump against 1.16 when
-it leaves beta: a beta build is not a stable thing to write a spec against.
+The smoke test also passes on the **1.16 public beta**. That is a behavioural pass, not a re-read:
+everything below was established against 1.15.114 and the dumps have not been regenerated since,
+so 1.16 says "the enemy API did not move far enough to break this" rather than "these members were
+checked again". Re-dump when 1.16 leaves beta - a beta build is not a stable thing to write a spec
+against.
 
 ---
 

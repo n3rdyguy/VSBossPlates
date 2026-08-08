@@ -3,10 +3,10 @@
 Manual checklist before any release. Game version under test: **1.15.114**. Plugin version
 under test: whatever `PluginVersion` currently says in `src/Plugin.cs`.
 
-**The 1.16 public beta has been played but not run through this list.** Note which game version a
-run was done against when reporting results; "works on the 1.16 beta" and "passed the checklist
-on 1.16" are different claims and only the second one belongs in the docs as verified. Beta
-builds move, so a pass against one is worth re-running when 1.16 ships.
+**Run against 1.15.114 and against the 1.16 public beta**, both passing. Note which game version a
+run was done against when reporting results; "works on the 1.16 beta" and "passed the checklist on
+1.16" are different claims and only the second one belongs in the docs as verified. Beta builds
+move, so the 1.16 pass is worth re-running when 1.16 ships.
 
 ## Setup
 

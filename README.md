@@ -84,11 +84,14 @@ Enemies are **pooled**. An `EnemyController` is never destroyed - it is deactiva
 
 See [`docs/RENDER-SPEC.md`](docs/RENDER-SPEC.md) for the full reasoning and [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) for the player-facing description.
 
+## Licence
+
+[MIT](LICENSE). Fork it, ship it, take pieces of it - a credit is appreciated and not required.
+
 ## Caveats
 
-- Developed and smoke-tested against Vampire Survivors 1.15.114. Also played on the **1.16 public
-  beta** with no problems seen, which says the enemy API this mod reads did not move. Two caveats:
-  1.16 has not been through the full checklist in `docs/SMOKE-TEST.md`, and a beta can still
-  change before it ships, so that result is good today rather than a promise about 1.16 release
+- Developed against Vampire Survivors 1.15.114, and smoke-tested on both 1.15.114 and the **1.16
+  public beta**. A beta can still change before it ships, so the 1.16 result belongs to the build
+  it was run against rather than to 1.16 on release
 - Boss names come from the Bestiary family name, which is right for bosses but would be wrong on a variant enemy. If a boss is ever misnamed, it needs a small override table
 - Bosses with more than one life refill their health rather than dying; the bar refills with them

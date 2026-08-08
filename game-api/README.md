@@ -7,10 +7,9 @@ What the game exposes about enemies, bosses and pooling, as of Vampire Survivors
 bodies.** You can read what exists and what it is typed as. You cannot read what it does. Any
 claim about behaviour in this file was observed in game, not deduced.
 
-**Every dump below is from 1.15.114 and has not been regenerated.** The mod has also been played
-on the 1.16 public beta with no problems, which is evidence that none of the members named here
-moved - but it is not the same as having re-read them. Re-dump when 1.16 ships, and say so here
-when you do.
+**Every dump below is from 1.15.114 and has not been regenerated.** The mod also passes its smoke
+test on the 1.16 public beta, which is evidence that none of the members named here moved - but it
+is not the same as having re-read them. Re-dump when 1.16 ships, and say so here when you do.
 
 ## Which assembly
 
