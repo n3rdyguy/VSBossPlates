@@ -2,6 +2,37 @@
 
 All notable changes to VS Boss Plates are listed here.
 
+## [0.1.2] - 2026-08-08
+
+Still a development build. Fixes a regression in 0.1.1 and the reason plates went missing on
+boss levels.
+
+### Fixed
+- **The rising water got a plate again.** It reports itself as a stage boss in Boss Rash, and
+  0.1.1 restructured the qualification rules so the boss flag short-circuits past the Bestiary
+  check. Hazards are now vetoed ahead of everything, on **no experience combined with no
+  Bestiary entry**. Neither half works alone: four genuine bosses award zero experience - the
+  Reaper, the Maddener, the Stalker and the Trickster - and every one of them is catalogued.
+- **Plates went missing on boss levels, because three-hit-point enemies were eating the limit.**
+  `MOON_EYE2` is flagged by the game as a boss and has three hit points; it registered 253 times
+  in a single run, dying instantly and returning from the pool each time, and every one of those
+  held a slot a real boss then could not have. The health floor now applies to the game's boss
+  flag as well as to its boss type set. Nothing strong is lost - the weak bosses that matter are
+  already through on the chest and experience rules.
+- **`MaxPlates` raised from 12 to 20.** A boss level can have a dozen bosses alive at once, and
+  the ones past the limit simply got nothing.
+- The log claimed to have kept enemies it never plated. The "kept" line was printed the moment an
+  enemy qualified, before the plate limit could turn it away, and then repeated every scan.
+
+### Notes
+- Base health turns out to be a weak signal on its own. Real bosses in one Boss Rash run ranged
+  from four hit points (`BOSS_MEDUSA1`) to 65535 (the Reaper). Experience separates far more
+  cleanly - filler pays five or less, real bosses pay 25 to 50 - which is why the rules lean on
+  it, and why the health floor is kept only for the handful of named bosses that pay nothing.
+- `BOSS_WITCH2` is deliberately not plated. Its id says boss; the game pays three experience for
+  it, the same as ordinary filler. The reward is the game's own statement of what something is
+  worth, and it outranks the name a developer gave it.
+
 ## [0.1.1] - 2026-08-08
 
 Still a development build. This release is what a day of actually playing with 0.1.0 turned up.
