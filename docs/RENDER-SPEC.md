@@ -185,17 +185,15 @@ list will rot on the next DLC. `Stage.BossTypes` is the authoritative set if a t
 ever needed. It is a `List<Nullable<EnemyType>>`; before the current public-branch build it lived
 at `EnemyFactory._bossTypes` as a `HashSet<EnemyType>`.
 
-### 4.5 Why this is not a SIMD workload
+### 4.5 Hot-path optimization
 
 Discovery is a branch-heavy walk over IL2CPP object wrappers. Each useful value comes from a
 native property or method call, and candidates take different paths through boss, treasure,
-Bestiary, experience and health checks. There is no contiguous numeric buffer for SIMD to load,
-and copying those values into one would cost more than the scalar comparisons it replaced.
+Bestiary, experience and health checks.
 
 Per-frame work is bounded by `MaxPlates` (60 at most and by default) and is likewise dominated
-by Unity transform, renderer and UI calls. Hand-written assembly or CPU intrinsics would add
-architecture-specific code without accelerating those boundaries. The useful optimization is
-to cross them less often:
+by Unity transform, renderer and UI calls. The useful optimization is to cross those boundaries
+less often:
 
 - Discovery carries type, boss and treasure facts into registration instead of reading them
   again. The shared `EnemyData` handle is read once for Bestiary, experience and base health.
@@ -209,9 +207,6 @@ to cross them less often:
 - If construction fails after creating the root, destroy the partial canvas before returning.
   Plate creation retries while the enemy remains tracked, so one leaked object per attempt grows
   into thousands within minutes.
-
-Do not introduce SIMD, unsafe native code or worker-thread processing unless profiling first
-finds a new, large numeric loop. Unity objects remain main-thread-only regardless.
 
 With `DebugVerbose=true`, one `[Perf]` line is emitted every 15 seconds. It reports isolated
 `BossRegistry.Tick` and discovery-scan timings, average tracked plates, scanned enemies, and the
