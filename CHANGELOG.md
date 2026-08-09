@@ -7,6 +7,8 @@ All notable changes to VS Boss Plates are listed here.
 ### Changed
 - Boss-type discovery builds again against the current public-branch game API. The game moved
   the type set from `EnemyFactory._bossTypes` to the nullable `Stage.BossTypes` list.
+- `DebugVerbose` now emits 15-second plugin timing and Unity-write summaries for comparing builds
+  in the same in-game scenario.
 - Unchanged bosses no longer resend the same fill, HP text, scale, rotation and inset values to
   Unity every frame. Discovery also carries one snapshot of an enemy's classification data
   through registration instead of repeating IL2CPP reads. These paths are dominated by native

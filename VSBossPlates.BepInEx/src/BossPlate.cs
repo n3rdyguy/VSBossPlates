@@ -92,6 +92,7 @@ internal sealed class BossPlate
         rootRect.sizeDelta = new Vector2(PlateWidth, PlateHeight);
         _rootTransform.localScale = Vector3.one * Scale;
         rootRect.rotation = Quaternion.identity;
+        PerformanceStats.RecordStaticTransformWrites(2);
 
         Sprite white = GetWhiteSprite();
 
@@ -181,6 +182,7 @@ internal sealed class BossPlate
             Vector2 anchorMax = _fill.anchorMax;
             anchorMax.x = fraction;
             _fill.anchorMax = anchorMax;
+            PerformanceStats.RecordFillWrites(1);
         }
 
         if (_hpText != null && (current != _lastCurrent || max != _lastMax))
@@ -188,11 +190,13 @@ internal sealed class BossPlate
             _lastCurrent = current;
             _lastMax = max;
 
+            PerformanceStats.RecordHpFormat();
             string text = FormatPair(current, max);
             if (text != _lastHpText)
             {
                 _lastHpText = text;
                 ((TMP_Text)_hpText).text = text;
+                PerformanceStats.RecordHpTextWrite();
             }
         }
     }
@@ -227,6 +231,7 @@ internal sealed class BossPlate
             basePos.x,
             top + Plugin.VerticalOffset + halfPlate,
             basePos.z);
+        PerformanceStats.RecordPositionWrite();
     }
 
     internal void SetVisible(bool visible)

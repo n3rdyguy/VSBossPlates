@@ -209,6 +209,11 @@ to cross them less often:
 Do not introduce SIMD, unsafe native code or worker-thread processing unless profiling first
 finds a new, large numeric loop. Unity objects remain main-thread-only regardless.
 
+With `DebugVerbose=true`, one `[Perf]` line is emitted every 15 seconds. It reports isolated
+`BossRegistry.Tick` and discovery-scan timings, average tracked plates, scanned enemies, and the
+number of fill, HP text, position and constant-transform writes. Compare builds at similar
+`trackedAvg` and `scanned` values; whole-run averages without those denominators are misleading.
+
 ---
 
 ## 5. Plate layout

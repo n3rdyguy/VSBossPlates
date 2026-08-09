@@ -151,7 +151,7 @@ screen busy, it clears the clutter without giving up the plate on the boss that 
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `DebugVerbose` | `false` | Log every boss the mod starts and stops tracking. Only useful when a plate does not appear, or appears over something that is not a boss |
+| `DebugVerbose` | `false` | Log every boss the mod starts and stops tracking, plus 15-second performance summaries. Only useful for diagnosis and profiling |
 
 ## 6. Compatibility
 

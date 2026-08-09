@@ -66,6 +66,7 @@ move, so the 1.16 pass is worth re-running when 1.16 ships.
 - [ ] `VerticalOffset` moves the plate up and down
 - [ ] `PlateScale` changes the plate size
 - [ ] `DebugVerbose=true` logs a registration and a matching teardown per boss
+- [ ] `DebugVerbose=true` logs one `[Perf]` summary every 15 seconds during a run
 
 ## Leaving a run
 

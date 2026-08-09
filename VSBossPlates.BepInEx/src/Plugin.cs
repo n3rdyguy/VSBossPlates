@@ -226,8 +226,8 @@ public class Plugin : BasePlugin
             "Debug",
             "DebugVerbose",
             false,
-            "Log every boss registration and teardown. Noisy; only useful when a plate does " +
-            "not appear or appears over the wrong enemy.");
+            "Log every boss registration and teardown, plus 15-second performance summaries. " +
+            "Noisy; only useful for diagnosis and profiling.");
 
         ApplyConfigValues();
 

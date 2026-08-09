@@ -139,10 +139,14 @@ internal static class BossRegistry
     /// Called from LateUpdate.</summary>
     internal static void Tick()
     {
+        long tickStarted = PerformanceStats.Start();
+
         if (Time.unscaledTime >= _nextScan)
         {
             _nextScan = Time.unscaledTime + Plugin.ScanInterval;
+            long scanStarted = PerformanceStats.Start();
             Scan();
+            PerformanceStats.RecordScan(scanStarted);
         }
 
         for (int i = Tracked.Count - 1; i >= 0; i--)
@@ -166,6 +170,8 @@ internal static class BossRegistry
                 Drop(entry, i);
             }
         }
+
+        PerformanceStats.RecordTick(tickStarted, Tracked.Count);
     }
 
     /// <summary>
@@ -194,6 +200,7 @@ internal static class BossRegistry
             if (enemies == null) return;
 
             int count = enemies.Count;
+            PerformanceStats.RecordScanSize(count);
             for (int i = 0; i < count; i++)
             {
                 EnemyController enemy = enemies[i];

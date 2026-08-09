@@ -55,7 +55,7 @@ BepInEx 6 has no stable release. Bleeding-edge *is* the correct channel here, no
 | Plates | `ScanIntervalSeconds` | `0.5` | How often to look for newly spawned bosses |
 | Hotkeys | `TogglePlatesKey` | `F9` | Show/hide all plates, mid-run. Saved to this file |
 | Hotkeys | `ToggleMiniBossesKey` | `F10` | Show/hide mini-boss plates only. Saved to this file |
-| Debug | `DebugVerbose` | `false` | Log every registration and teardown |
+| Debug | `DebugVerbose` | `false` | Log registrations, teardowns and 15-second performance summaries |
 
 ## Expected log lines
 
