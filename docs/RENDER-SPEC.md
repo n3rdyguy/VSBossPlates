@@ -85,10 +85,9 @@ fallback is a screen-space overlay plus `WorldToScreenPoint` scaled by
 ## 3. Pooling is the thing that must be right
 
 Enemies come from **QFSW MOP2** pools, owned by `VampireSurvivors.App.Framework.EnemyFactory`
-(`Dictionary<EnemyType, ObjectPool> _cachedEnemyPools`, plus a
-`HashSet<EnemyType> _bossTypes`). `ObjectPool.Release(GameObject)` puts an instance back and
-`GetObject()` hands the same one out again. `EnemyController.InitialiseLocalData(EnemyType)`
-then re-keys it to a different enemy.
+(`Dictionary<EnemyType, ObjectPool> _cachedEnemyPools`). `ObjectPool.Release(GameObject)` puts
+an instance back and `GetObject()` hands the same one out again.
+`EnemyController.InitialiseLocalData(EnemyType)` then re-keys it to a different enemy.
 
 **An `EnemyController` is never destroyed.** Any map keyed on object identity will keep a boss
 plate alive over whatever that instance became next.
@@ -182,8 +181,9 @@ is painful. It was never a good option either.
 Tested with `IsBoss` and `IsBossEnemy()`, never a type-name list. There are
 two dozen boss controller subclasses today (`EnemyControllerBoss_BatDragon`,
 `EX_Boss_Colossus`, `TP_ADV_BOSS_*`, `LEMON_BOSS_*`, `EME_TeleporterBoss`, and so on) and any
-list will rot on the next DLC. `EnemyFactory._bossTypes` is the authoritative set if a
-type-only test is ever needed.
+list will rot on the next DLC. `Stage.BossTypes` is the authoritative set if a type-only test is
+ever needed. It is a `List<Nullable<EnemyType>>`; before the current public-branch build it lived
+at `EnemyFactory._bossTypes` as a `HashSet<EnemyType>`.
 
 ### 4.5 Why this is not a SIMD workload
 
@@ -326,11 +326,12 @@ about". A hazard is not catalogued; a real boss is. So the plate is gated on hav
 record - a non-empty `bName` and not `bIgnore` - rather than on the boss flag alone. Config
 `RequireBestiaryEntry`, default on.
 
-**And `EnemyFactory._bossTypes` is not a list of bosses either.** A Mad Forest run showed
-`BAT4` going through the boss path with `bName='' xp=30 maxHp=5` - five hit points, an ordinary
-bat. The set is closer to "types the boss spawner is allowed to use", 198 of them. It is only
-useful for the mini-boss tier *combined* with the Bestiary test; on its own it would put a
-health bar over every bat in the forest.
+**And `Stage.BossTypes` is not a list of bosses either.** A Mad Forest run against its earlier
+`EnemyFactory._bossTypes` form showed `BAT4` going through the boss path with
+`bName='' xp=30 maxHp=5` - five hit points, an ordinary bat. The set is closer to "types the boss
+spawner is allowed to use", 198 of them in that run. It is only useful for the mini-boss tier
+*combined* with the Bestiary test; on its own it would put a health bar over every bat in the
+forest.
 
 Worth noting that `bIgnore` was false for both `BULLET_W` and `BAT4`, so `bIgnore` alone is not
 the discriminator. An empty `bName` is.
