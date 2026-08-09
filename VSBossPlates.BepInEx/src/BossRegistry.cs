@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using VampireSurvivors.Data;
+using VampireSurvivors.Data.Enemies;
 using VampireSurvivors.Objects;
 using VampireSurvivors.Objects.Characters;
 using Object = UnityEngine.Object;
@@ -64,6 +65,21 @@ internal static class BossRegistry
         /// enemy. Recorded once at registration rather than asked per frame, because the answer
         /// cannot change for a given instance and type.</summary>
         internal bool IsMajor;
+    }
+
+    /// <summary>
+    /// Values used to decide whether one scan candidate deserves a plate. Keeping this snapshot
+    /// avoids asking IL2CPP for the same enemy fields again as the candidate moves from discovery
+    /// through registration and qualification.
+    /// </summary>
+    private struct CandidateFacts
+    {
+        internal EnemyType Type;
+        internal bool IsMajor;
+        internal bool HasTreasure;
+        internal bool HasBestiaryEntry;
+        internal float Xp;
+        internal float BaseHp;
     }
 
     private static readonly List<Entry> Tracked = new List<Entry>();
@@ -189,8 +205,8 @@ internal static class BossRegistry
                 // 147 register/drop pairs in a single run.
                 if (!IsUsable(enemy)) continue;
 
-                if (!IsPlateworthy(enemy)) continue;
-                Register(enemy);
+                if (!TryReadCandidateFacts(enemy, out CandidateFacts facts)) continue;
+                Register(enemy, facts);
             }
         }
         catch (Exception ex)
@@ -199,12 +215,12 @@ internal static class BossRegistry
         }
     }
 
-    private static void Register(EnemyController enemy)
+    private static void Register(EnemyController enemy, CandidateFacts facts)
     {
         try
         {
             int id = enemy.GetInstanceID();
-            EnemyType type = enemy.EnemyType;
+            EnemyType type = facts.Type;
 
             for (int i = 0; i < Tracked.Count; i++)
             {
@@ -232,7 +248,8 @@ internal static class BossRegistry
                 LogDataProfile(enemy);
             }
 
-            if (!Qualifies(enemy, type, out string why))
+            ReadEnemyDataFacts(enemy, ref facts);
+            if (!Qualifies(facts, out string why))
             {
                 bool first = prior.Count == 0;
                 Reject(id, type);
@@ -267,10 +284,10 @@ internal static class BossRegistry
             {
                 Enemy = enemy,
                 InstanceId = id,
-                Type = enemy.EnemyType,
+                Type = type,
                 Plate = null,
                 HasBeenDamaged = false,
-                IsMajor = IsBoss(enemy)
+                IsMajor = facts.IsMajor
             };
             Tracked.Add(entry);
 
@@ -295,7 +312,7 @@ internal static class BossRegistry
     /// points, so a health gate in front of the experience rule excludes the exact case that
     /// rule exists for.
     /// </summary>
-    private static bool Qualifies(EnemyController enemy, EnemyType type, out string why)
+    private static bool Qualifies(CandidateFacts facts, out string why)
     {
         // Hazards first, and this veto outranks even the game's own boss flag.
         //
@@ -304,21 +321,21 @@ internal static class BossRegistry
         // heard of it, which is the pair that gives it away: four genuine bosses also award no
         // experience (the Reaper, the Maddener, the Stalker, the Trickster) and every one of
         // them is catalogued. Neither test alone is enough; together they are exact.
-        if (ReadXp(enemy) <= 0f && !HasBestiaryEntry(enemy))
+        if (facts.Xp <= 0f && !facts.HasBestiaryEntry)
         {
             why = "no experience and no Bestiary entry, so scenery rather than a creature";
             return false;
         }
 
-        if (Plugin.IncludeTreasureCarriers && HasTreasure(enemy))
+        if (facts.HasTreasure)
         {
             why = "it is carrying a chest";
             return true;
         }
 
-        if (IsBonusEnemy(enemy))
+        if (Plugin.BonusXpThreshold > 0 && facts.Xp >= Plugin.BonusXpThreshold)
         {
-            why = $"it is worth {ReadXp(enemy):0} xp";
+            why = $"it is worth {facts.Xp:0} xp";
             return true;
         }
 
@@ -331,9 +348,9 @@ internal static class BossRegistry
         // Nothing strong is lost by this. The weak bosses that matter are already through:
         // BOSS_HARPY and BOSS_SKULL2 are five hit points and carry chests, DEVIL3 is five and
         // worth thirty experience.
-        bool flagged = IsBoss(enemy);
-        bool catalogued = !Plugin.RequireBestiaryEntry || HasBestiaryEntry(enemy);
-        float hp = ReadBaseHp(enemy);
+        bool flagged = facts.IsMajor;
+        bool catalogued = !Plugin.RequireBestiaryEntry || facts.HasBestiaryEntry;
+        float hp = facts.BaseHp;
 
         if ((flagged || catalogued) && hp >= Plugin.MiniBossMinHp)
         {
@@ -453,75 +470,45 @@ internal static class BossRegistry
     }
 
     /// <summary>
-    /// Not everything the game flags as a boss is a boss you fight.
+    /// Reads the shared EnemyData handle once, then takes the three values qualification needs
+    /// from it. Each field remains independently guarded because one bad interop read must not
+    /// prevent the remaining safe reads.
     ///
-    /// BULLET_W - the water that rises from the bottom of the screen on Bat Country - comes
-    /// back with IsBoss true, because the game reuses the boss machinery for stage hazards.
-    /// It has no health worth reading and no name worth showing, and a plate over it is noise.
-    ///
-    /// The Bestiary is the game's own answer to "is this a creature the player is meant to know
-    /// about". A hazard is not catalogued: it has no bName, or it is explicitly marked bIgnore.
-    /// A real boss is. So the Bestiary record, not the boss flag, decides whether a plate is
-    /// drawn.
-    ///
-    /// If this ever hides a boss it should not, the log line from LogDataProfile shows exactly
-    /// which field disagreed.
+    /// Bestiary failures deliberately mean "present". When the mod cannot tell, showing a plate
+    /// that might be wrong is safer than hiding a real boss.
     /// </summary>
-    private static bool HasBestiaryEntry(EnemyController enemy)
+    private static void ReadEnemyDataFacts(EnemyController enemy, ref CandidateFacts facts)
     {
+        facts.HasBestiaryEntry = true;
+
+        EnemyData data;
         try
         {
-            var data = enemy.CurrentEnemyData;
-            if (data == null) return false;
-
-            if (data.bIgnore) return false;
-
-            return !string.IsNullOrWhiteSpace(data.bName);
+            data = enemy.CurrentEnemyData;
         }
         catch
         {
-            // Cannot tell. Prefer showing a plate that might be wrong over hiding a real boss.
-            return true;
+            return;
         }
-    }
 
-    /// <summary>
-    /// The exception to the Bestiary rule: an enemy the game does not catalogue, but which is
-    /// clearly not filler.
-    ///
-    /// The blue glowing bat in Mad Forest is the case this exists for. It reads
-    /// bName='' xp=30 maxHp=5 - no Bestiary record at all, and five hit points, so neither the
-    /// Bestiary test nor any health-based test would keep it. What marks it out is the reward:
-    /// thirty experience where an ordinary enemy gives one or two.
-    ///
-    /// XP is the honest signal here, and health is not. A bonus enemy is defined by being worth
-    /// killing, not by being hard to kill.
-    ///
-    /// Still bounded by the boss type set, so this can only ever admit one of those 198 types
-    /// and cannot start plating ordinary enemies late in a run when their XP has scaled up.
-    /// </summary>
-    private static bool IsBonusEnemy(EnemyController enemy)
-    {
-        if (Plugin.BonusXpThreshold <= 0) return false;
-        return ReadXp(enemy) >= Plugin.BonusXpThreshold;
-    }
+        if (data == null)
+        {
+            facts.HasBestiaryEntry = false;
+            return;
+        }
 
-    private static float ReadXp(EnemyController enemy)
-    {
+        try { facts.Xp = data.xp; } catch { }
+        try { facts.BaseHp = data.maxHp; } catch { }
         try
         {
-            var data = enemy.CurrentEnemyData;
-            return data == null ? 0f : data.xp;
+            facts.HasBestiaryEntry = !data.bIgnore && !string.IsNullOrWhiteSpace(data.bName);
         }
-        catch
-        {
-            return 0f;
-        }
+        catch { }
     }
 
     /// <summary>
     /// Dumps every field that could plausibly separate a real boss from a stage hazard, so the
-    /// rule in HasBestiaryEntry can be corrected against evidence rather than re-guessed.
+    /// qualification rule can be corrected against evidence rather than re-guessed.
     /// Logged once per registration, behind DebugVerbose.
     /// </summary>
     private static void LogDataProfile(EnemyController enemy)
@@ -612,6 +599,30 @@ internal static class BossRegistry
         }
     }
 
+    /// <summary>
+    /// First-stage classification for the discovery scan. These are the values registration
+    /// would otherwise read again immediately. EnemyData is intentionally deferred until after
+    /// the rejection-memory check, so known ordinary enemies retain their cheap early exit.
+    /// </summary>
+    private static bool TryReadCandidateFacts(
+        EnemyController enemy,
+        out CandidateFacts facts)
+    {
+        facts = default;
+
+        try { facts.Type = enemy.EnemyType; }
+        catch { return false; }
+
+        facts.IsMajor = IsBoss(enemy);
+        if (Plugin.IncludeTreasureCarriers) facts.HasTreasure = HasTreasure(enemy);
+
+        if (facts.IsMajor || facts.HasTreasure) return true;
+        if (!Plugin.IncludeMiniBosses) return false;
+
+        try { return GameAccess.IsBossType(facts.Type); }
+        catch { return false; }
+    }
+
     private static bool IsPlateworthy(EnemyController enemy)
     {
         if (IsBoss(enemy)) return true;
@@ -635,23 +646,6 @@ internal static class BossRegistry
         // worth a plate is settled in Register, where the chest and experience exceptions can
         // still speak for an enemy that is weak but interesting.
         return true;
-    }
-
-    /// <summary>
-    /// Health from the enemy's data, not from the live instance. That is the value before the
-    /// run scales it, so the threshold means the same thing at minute two and minute twenty.
-    /// </summary>
-    private static float ReadBaseHp(EnemyController enemy)
-    {
-        try
-        {
-            var data = enemy.CurrentEnemyData;
-            return data == null ? 0f : data.maxHp;
-        }
-        catch
-        {
-            return 0f;
-        }
     }
 
     /// <summary>
