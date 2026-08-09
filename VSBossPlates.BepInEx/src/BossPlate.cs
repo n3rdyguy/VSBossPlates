@@ -34,10 +34,18 @@ internal sealed class BossPlate
     private const float TextPadding = 4f;
 
     private GameObject _root;
+    // Each Unity property access crosses the managed/IL2CPP boundary. Keep the component handle
+    // and the last values sent to the UI so an unchanged boss does not repeat native calls every
+    // frame merely to write the same state again.
+    private Transform _rootTransform;
     private RectTransform _fill;
     private TextMeshProUGUI _nameText;
     private TextMeshProUGUI _hpText;
     private bool _visible = true;
+    private float _lastFraction = float.NaN;
+    private float _lastCurrent = float.NaN;
+    private float _lastMax = float.NaN;
+    private string _lastHpText;
 
     /// <summary>A scheduled stage boss rather than a mini-boss. Decides which scale applies -
     /// see Scale.</summary>
@@ -68,6 +76,7 @@ internal sealed class BossPlate
     private void Build(EnemyController enemy, string displayName, Camera cam)
     {
         _root = new GameObject("VSBossPlate");
+        _rootTransform = _root.transform;
         Canvas canvas = _root.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.worldCamera = cam;
@@ -81,7 +90,7 @@ internal sealed class BossPlate
 
         var rootRect = _root.GetComponent<RectTransform>();
         rootRect.sizeDelta = new Vector2(PlateWidth, PlateHeight);
-        rootRect.localScale = Vector3.one * Scale;
+        _rootTransform.localScale = Vector3.one * Scale;
         rootRect.rotation = Quaternion.identity;
 
         Sprite white = GetWhiteSprite();
@@ -166,18 +175,25 @@ internal sealed class BossPlate
 
         // Width is driven by the anchor rather than Image.fillAmount so the bar does not
         // depend on a sprite being sliced or on Image.type surviving a null sprite.
-        if (_fill != null)
+        if (_fill != null && fraction != _lastFraction)
         {
+            _lastFraction = fraction;
             Vector2 anchorMax = _fill.anchorMax;
             anchorMax.x = fraction;
             _fill.anchorMax = anchorMax;
-            _fill.offsetMin = new Vector2(BarInset, BarInset);
-            _fill.offsetMax = new Vector2(-BarInset, -BarInset);
         }
 
-        if (_hpText != null)
+        if (_hpText != null && (current != _lastCurrent || max != _lastMax))
         {
-            ((TMP_Text)_hpText).text = FormatPair(current, max);
+            _lastCurrent = current;
+            _lastMax = max;
+
+            string text = FormatPair(current, max);
+            if (text != _lastHpText)
+            {
+                _lastHpText = text;
+                ((TMP_Text)_hpText).text = text;
+            }
         }
     }
 
@@ -207,12 +223,10 @@ internal sealed class BossPlate
 
         float scale = Scale;
         float halfPlate = PlateHeight * 0.5f * scale;
-        _root.transform.position = new Vector3(
+        _rootTransform.position = new Vector3(
             basePos.x,
             top + Plugin.VerticalOffset + halfPlate,
             basePos.z);
-        _root.transform.rotation = Quaternion.identity;
-        _root.transform.localScale = Vector3.one * scale;
     }
 
     internal void SetVisible(bool visible)
@@ -228,6 +242,7 @@ internal sealed class BossPlate
         try { Object.Destroy(_root); }
         catch { }
         _root = null;
+        _rootTransform = null;
         _fill = null;
         _nameText = null;
         _hpText = null;
