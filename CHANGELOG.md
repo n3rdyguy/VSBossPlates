@@ -4,6 +4,12 @@ All notable changes to VS Boss Plates are listed here.
 
 ## Unreleased
 
+### Fixed
+- **No plates appeared and the log grew by megabytes.** The optimized build cached the root
+  `Transform` before adding its Canvas. Unity replaced that component with a `RectTransform`, so
+  every plate creation wrote scale through a dead native wrapper and failed. The cache now takes
+  the final `RectTransform`, and failed partial builds are destroyed instead of leaked.
+
 ### Changed
 - Boss-type discovery builds again against the current public-branch game API. The game moved
   the type set from `EnemyFactory._bossTypes` to the nullable `Stage.BossTypes` list.

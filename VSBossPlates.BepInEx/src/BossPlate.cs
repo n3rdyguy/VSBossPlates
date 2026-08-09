@@ -57,17 +57,21 @@ internal sealed class BossPlate
 
     internal static BossPlate Create(EnemyController enemy, string displayName, bool isMajor)
     {
+        BossPlate plate = null;
         try
         {
             Camera cam = ResolveCamera(enemy);
 
-            var plate = new BossPlate();
+            plate = new BossPlate();
             plate._isMajor = isMajor;
             plate.Build(enemy, displayName, cam);
             return plate._root == null ? null : plate;
         }
         catch (Exception ex)
         {
+            // Build can fail after creating the root. Leaving that partial canvas behind leaks a
+            // native object every retry, which turned one bad transform into thousands of them.
+            if (plate != null) plate.Destroy();
             Plugin.Log.LogWarning("Could not build boss plate: " + ex.Message);
             return null;
         }
@@ -76,7 +80,6 @@ internal sealed class BossPlate
     private void Build(EnemyController enemy, string displayName, Camera cam)
     {
         _root = new GameObject("VSBossPlate");
-        _rootTransform = _root.transform;
         Canvas canvas = _root.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.worldCamera = cam;
@@ -89,6 +92,9 @@ internal sealed class BossPlate
         try { _root.layer = enemy.gameObject.layer; } catch { }
 
         var rootRect = _root.GetComponent<RectTransform>();
+        // Adding Canvas replaces a new GameObject's Transform with a RectTransform. Cache only
+        // after that conversion; the old wrapper points at a destroyed native component.
+        _rootTransform = rootRect;
         rootRect.sizeDelta = new Vector2(PlateWidth, PlateHeight);
         _rootTransform.localScale = Vector3.one * Scale;
         rootRect.rotation = Quaternion.identity;

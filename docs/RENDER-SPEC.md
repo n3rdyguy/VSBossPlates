@@ -204,7 +204,11 @@ to cross them less often:
 - A plate remembers the last fill and health values sent to Unity. Unchanged values do not
   repeat native UI setters or rebuild HP text every frame.
 - The plate caches its root transform, and its constant rotation and scale are set at creation
-  instead of every `LateUpdate`.
+  instead of every `LateUpdate`. Cache only after adding `Canvas`: Unity replaces the initial
+  `Transform` with a `RectTransform`, invalidating any wrapper captured before that conversion.
+- If construction fails after creating the root, destroy the partial canvas before returning.
+  Plate creation retries while the enemy remains tracked, so one leaked object per attempt grows
+  into thousands within minutes.
 
 Do not introduce SIMD, unsafe native code or worker-thread processing unless profiling first
 finds a new, large numeric loop. Unity objects remain main-thread-only regardless.
