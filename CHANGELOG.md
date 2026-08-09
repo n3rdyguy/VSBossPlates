@@ -2,6 +2,15 @@
 
 All notable changes to VS Boss Plates are listed here.
 
+## Unreleased
+
+### Changed
+- Unchanged bosses no longer resend the same fill, HP text, scale, rotation and inset values to
+  Unity every frame. Discovery also carries one snapshot of an enemy's classification data
+  through registration instead of repeating IL2CPP reads. These paths are dominated by native
+  boundary calls rather than arithmetic, so SIMD or architecture-specific assembly would not
+  improve them.
+
 ## [0.1.2] - 2026-08-08
 
 Still a development build. Fixes a regression in 0.1.1 and the reason plates went missing on
