@@ -45,7 +45,7 @@ BepInEx 6 has no stable release. Bleeding-edge *is* the correct channel here, no
 | Plates | `HideWhenFull` | `false` | Only show a plate once the boss has taken damage |
 | Plates | `IncludeTreasureCarriers` | `true` | Plate any enemy carrying a treasure chest. The game's own mark of a mini-boss |
 | Plates | `IncludeMiniBosses` | `true` | Also plate strong mini-bosses, not just the scheduled stage boss |
-| Plates | `MaxPlates` | `20` | Most plates on screen at once |
+| Plates | `MaxPlates` | `60` | Most plates on screen at once |
 | Plates | `RequireBestiaryEntry` | `true` | Only plate bosses the Bestiary knows about, so stage hazards are skipped |
 | Plates | `BonusXpThreshold` | `25` | Also plate an enemy worth at least this much XP, Bestiary entry or not. `0` turns it off |
 | Plates | `MiniBossMinHp` | `20` | Base health an enemy needs before the boss type set alone earns it a plate |

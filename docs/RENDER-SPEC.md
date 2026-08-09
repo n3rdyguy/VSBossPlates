@@ -192,7 +192,7 @@ native property or method call, and candidates take different paths through boss
 Bestiary, experience and health checks. There is no contiguous numeric buffer for SIMD to load,
 and copying those values into one would cost more than the scalar comparisons it replaced.
 
-Per-frame work is bounded by `MaxPlates` (60 at most, 20 by default) and is likewise dominated
+Per-frame work is bounded by `MaxPlates` (60 at most and by default) and is likewise dominated
 by Unity transform, renderer and UI calls. Hand-written assembly or CPU intrinsics would add
 architecture-specific code without accelerating those boundaries. The useful optimization is
 to cross them less often:
@@ -223,6 +223,11 @@ and 0.0674 ms after optimization, about 15% lower despite the optimized sample a
 more plates. Fill writes fell from three per tracked-plate frame to 0.126, HP text writes from one
 to 0.126, and rotation/scale writes from two to effectively zero. Total tick averages were 0.0917
 and 0.0906 ms; scan workloads differed too much for that smaller difference to mean anything.
+
+A later God Mode stress run spawned 84 bosses and held the old 20-plate default for eleven
+measurement windows. Four qualifying types never received a free slot before they died. Raising
+the cap to 60 produced no observable performance drop, so 60 is now both the default and the hard
+configuration maximum.
 
 ---
 

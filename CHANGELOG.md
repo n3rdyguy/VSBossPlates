@@ -11,6 +11,9 @@ All notable changes to VS Boss Plates are listed here.
   the final `RectTransform`, and failed partial builds are destroyed instead of leaked.
 
 ### Changed
+- **Qualifying bosses disappeared during large waves because twenty plates filled the cap.** The
+  default `MaxPlates` is now 60. A stress run reached the old cap for eleven measurement windows;
+  repeating it at 60 produced no observable performance drop.
 - Boss-type discovery builds again against the current public-branch game API. The game moved
   the type set from `EnemyFactory._bossTypes` to the nullable `Stage.BossTypes` list.
 - `DebugVerbose` now emits 15-second plugin timing and Unity-write summaries for comparing builds

@@ -56,9 +56,9 @@ you would rather not see them.
 A bonus enemy is defined by being worth killing, not by being hard to kill, which is why the
 test is experience rather than health.
 
-At most `MaxPlates` plates are drawn at once, twenty by default. A wall of health bars is worse
-than none, but a boss level can have a dozen bosses alive together, so the limit has to clear
-that comfortably.
+At most `MaxPlates` plates are drawn at once, sixty by default. This is a hard safety ceiling,
+not a target: a boss stress test filled the old twenty-plate limit and hid qualifying enemies,
+while sixty showed no measurable performance drop.
 
 ## 3. When a plate appears and disappears
 
@@ -100,7 +100,7 @@ the mod installed. Edit it with the game closed.
 | `HideWhenFull` | `false` | Only show a plate once the boss has taken damage |
 | `IncludeTreasureCarriers` | `true` | Plate any enemy carrying a treasure chest, whatever else it looks like. The game's own mark of a mini-boss |
 | `IncludeMiniBosses` | `true` | Also plate strong mini-bosses, not just the scheduled stage boss |
-| `MaxPlates` | `20` | Most plates on screen at once. Boss levels can have a dozen alive together |
+| `MaxPlates` | `60` | Most plates on screen at once. A hard safety ceiling for extreme boss counts |
 | `RequireBestiaryEntry` | `true` | Only draw a plate for a boss the Bestiary knows about, so stage hazards are skipped |
 | `BonusXpThreshold` | `25` | Also plate an enemy worth at least this much experience, Bestiary entry or not. Set to `0` to turn the exception off. Range 0 to 10000 |
 | `MiniBossMinHp` | `20` | How much base health an enemy needs before belonging to the game's boss type set is enough on its own. Does not apply to stage bosses, chest carriers or bonus enemies. Range 0 to 10000 |

@@ -111,12 +111,12 @@ public class Plugin : BasePlugin
         _maxPlates = Config.Bind(
             "Plates",
             "MaxPlates",
-            20,
+            60,
             new ConfigDescription(
-                "Most plates on screen at once. A wall of health bars is worse than none. Twelve " +
-                "was too few for a boss level, where a dozen bosses can be alive at the same " +
-                "time and the ones past the cap simply got nothing. Once the cap is reached " +
-                "no further plates appear until something dies.",
+                "Most plates on screen at once. Boss stress tests reached the old limit of " +
+                "twenty and left qualifying enemies without plates, while sixty caused no " +
+                "measurable performance drop. Once the cap is reached no further plates appear " +
+                "until something dies.",
                 new AcceptableValueRange<int>(1, 60)));
 
         _includeTreasureCarriers = Config.Bind(
