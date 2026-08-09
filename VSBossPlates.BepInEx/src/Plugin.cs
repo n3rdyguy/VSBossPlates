@@ -23,7 +23,7 @@ public class Plugin : BasePlugin
 {
     public const string PluginGuid = "com.n3rdyguy.vsbossplates";
     public const string PluginName = "VS Boss Plates";
-    public const string PluginVersion = "0.1.2";
+    public const string PluginVersion = "0.1.3";
 
     internal static new ManualLogSource Log;
 

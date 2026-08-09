@@ -2,7 +2,10 @@
 
 All notable changes to VS Boss Plates are listed here.
 
-## Unreleased
+## [0.1.3] - 2026-08-09
+
+Still a development build. Reduces the plugin's per-frame work, restores compatibility with the
+current public game build, and raises the plate limit after an in-game boss stress test.
 
 ### Fixed
 - **No plates appeared and the log grew by megabytes.** The optimized build cached the root
