@@ -185,6 +185,30 @@ two dozen boss controller subclasses today (`EnemyControllerBoss_BatDragon`,
 list will rot on the next DLC. `EnemyFactory._bossTypes` is the authoritative set if a
 type-only test is ever needed.
 
+### 4.5 Why this is not a SIMD workload
+
+Discovery is a branch-heavy walk over IL2CPP object wrappers. Each useful value comes from a
+native property or method call, and candidates take different paths through boss, treasure,
+Bestiary, experience and health checks. There is no contiguous numeric buffer for SIMD to load,
+and copying those values into one would cost more than the scalar comparisons it replaced.
+
+Per-frame work is bounded by `MaxPlates` (60 at most, 20 by default) and is likewise dominated
+by Unity transform, renderer and UI calls. Hand-written assembly or CPU intrinsics would add
+architecture-specific code without accelerating those boundaries. The useful optimization is
+to cross them less often:
+
+- Discovery carries type, boss and treasure facts into registration instead of reading them
+  again. The shared `EnemyData` handle is read once for Bestiary, experience and base health.
+- Rejected enemies still exit before the `EnemyData` read, preserving the reject memory's cheap
+  path.
+- A plate remembers the last fill and health values sent to Unity. Unchanged values do not
+  repeat native UI setters or rebuild HP text every frame.
+- The plate caches its root transform, and its constant rotation and scale are set at creation
+  instead of every `LateUpdate`.
+
+Do not introduce SIMD, unsafe native code or worker-thread processing unless profiling first
+finds a new, large numeric loop. Unity objects remain main-thread-only regardless.
+
 ---
 
 ## 5. Plate layout
@@ -220,6 +244,8 @@ Canvas units, scaled to world units by `PlateScale`.
 - The HP pair shares one unit, chosen from the maximum. Formatting each side independently
   gave `393k / 393.2k`, where the two halves disagree on precision and an untouched boss looks
   damaged.
+- Fill and HP text setters run only when their inputs change. Position still updates every
+  frame because the enemy can move every frame.
 
 ### 5.3 Small plates are blurry, and no setting fixes that
 
