@@ -56,6 +56,7 @@ BepInEx 6 has no stable release. Bleeding-edge *is* the correct channel here, no
 | Hotkeys | `TogglePlatesKey` | `F9` | Show/hide all plates, mid-run. Saved to this file |
 | Hotkeys | `ToggleMiniBossesKey` | `F10` | Show/hide mini-boss plates only. Saved to this file |
 | Debug | `DebugVerbose` | `false` | Log registrations, teardowns and 15-second performance summaries |
+| Debug | `ShowFps` | `false` | Show a small smoothed FPS counter in the top-left corner |
 
 ## Expected log lines
 

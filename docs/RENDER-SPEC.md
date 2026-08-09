@@ -218,6 +218,12 @@ With `DebugVerbose=true`, one `[Perf]` line is emitted every 15 seconds. It repo
 number of fill, HP text, position and constant-transform writes. Compare builds at similar
 `trackedAvg` and `scanned` values; whole-run averages without those denominators are misleading.
 
+The 2026-08-09 Boss Rash comparison measured 0.0791 ms of non-scan work per active baseline frame
+and 0.0674 ms after optimization, about 15% lower despite the optimized sample averaging slightly
+more plates. Fill writes fell from three per tracked-plate frame to 0.126, HP text writes from one
+to 0.126, and rotation/scale writes from two to effectively zero. Total tick averages were 0.0917
+and 0.0906 ms; scan workloads differed too much for that smaller difference to mean anything.
+
 ---
 
 ## 5. Plate layout
@@ -255,6 +261,14 @@ Canvas units, scaled to world units by `PlateScale`.
   damaged.
 - Fill and HP text setters run only when their inputs change. Position still updates every
   frame because the enemy can move every frame.
+
+### 5.4 FPS counter
+
+`ShowFps` uses IMGUI rather than another world-space canvas. It is diagnostic screen text and
+should stay small and sharp, so drawing after the game's low-resolution render texture is the
+right tradeoff here. The displayed value counts `Update` calls over half-second windows using
+unscaled time. A black one-pixel shadow keeps the default white label readable without creating
+or loading another font.
 
 ### 5.3 Small plates are blurry, and no setting fixes that
 

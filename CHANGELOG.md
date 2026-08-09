@@ -21,6 +21,10 @@ All notable changes to VS Boss Plates are listed here.
   boundary calls rather than arithmetic, so SIMD or architecture-specific assembly would not
   improve them.
 
+### Added
+- `ShowFps` draws a small, smoothed top-left FPS counter for diagnosing perceived changes in game
+  speed. It is off by default.
+
 ## [0.1.2] - 2026-08-08
 
 Still a development build. Fixes a regression in 0.1.1 and the reason plates went missing on

@@ -152,6 +152,7 @@ screen busy, it clears the clutter without giving up the plate on the boss that 
 | Key | Default | Meaning |
 |-----|---------|---------|
 | `DebugVerbose` | `false` | Log every boss the mod starts and stops tracking, plus 15-second performance summaries. Only useful for diagnosis and profiling |
+| `ShowFps` | `false` | Show a small smoothed FPS counter in the top-left corner |
 
 ## 6. Compatibility
 
