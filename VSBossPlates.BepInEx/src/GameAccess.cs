@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using VampireSurvivors.App.Framework;
 using VampireSurvivors.Data;
 using VampireSurvivors.Objects;
 using Object = UnityEngine.Object;
@@ -56,8 +55,11 @@ internal static class GameAccess
     }
 
     /// <summary>
-    /// EnemyFactory._bossTypes is the game's own answer to "which enemy types are bosses",
-    /// which beats any list this mod could keep: it stays correct across DLC.
+    /// Stage.BossTypes is the game's own answer to "which enemy types are bosses", which beats
+    /// any list this mod could keep: it stays correct across DLC.
+    ///
+    /// This used to live at EnemyFactory._bossTypes. The 1.16 interop moved it to Stage and made
+    /// each element nullable, so both the collection and every value need checking.
     /// </summary>
     internal static List<EnemyType> GetBossTypes()
     {
@@ -68,13 +70,15 @@ internal static class GameAccess
 
         try
         {
-            EnemyFactory factory = stage.EnemyFactory;
-            if (factory == null) return null;
+            var bossTypes = stage.BossTypes;
+            if (bossTypes == null) return null;
 
             var list = new List<EnemyType>();
-            foreach (EnemyType t in factory._bossTypes)
+            int count = bossTypes.Count;
+            for (int i = 0; i < count; i++)
             {
-                list.Add(t);
+                Il2CppSystem.Nullable<EnemyType> value = bossTypes[i];
+                if (value != null && value.HasValue) list.Add(value.Value);
             }
 
             list.Sort();

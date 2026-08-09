@@ -23,7 +23,7 @@ public class Plugin : BasePlugin
 {
     public const string PluginGuid = "com.n3rdyguy.vsbossplates";
     public const string PluginName = "VS Boss Plates";
-    public const string PluginVersion = "0.1.2";
+    public const string PluginVersion = "0.1.3";
 
     internal static new ManualLogSource Log;
 
@@ -44,6 +44,7 @@ public class Plugin : BasePlugin
     internal static float PlateScale;
     internal static float MiniBossPlateScale;
     internal static float ScanInterval;
+    internal static bool ShowFps;
     internal static bool DebugVerbose;
     internal static KeyCode TogglePlatesKey;
     internal static KeyCode ToggleMiniBossesKey;
@@ -66,6 +67,7 @@ public class Plugin : BasePlugin
     private ConfigEntry<float> _plateScale;
     private ConfigEntry<float> _miniBossPlateScale;
     private ConfigEntry<float> _scanInterval;
+    private ConfigEntry<bool> _showFps;
     private ConfigEntry<bool> _debugVerbose;
 
     public override void Load()
@@ -109,12 +111,12 @@ public class Plugin : BasePlugin
         _maxPlates = Config.Bind(
             "Plates",
             "MaxPlates",
-            20,
+            60,
             new ConfigDescription(
-                "Most plates on screen at once. A wall of health bars is worse than none. Twelve " +
-                "was too few for a boss level, where a dozen bosses can be alive at the same " +
-                "time and the ones past the cap simply got nothing. Once the cap is reached " +
-                "no further plates appear until something dies.",
+                "Most plates on screen at once. Boss stress tests reached the old limit of " +
+                "twenty and left qualifying enemies without plates, while sixty caused no " +
+                "measurable performance drop. Once the cap is reached no further plates appear " +
+                "until something dies.",
                 new AcceptableValueRange<int>(1, 60)));
 
         _includeTreasureCarriers = Config.Bind(
@@ -226,8 +228,14 @@ public class Plugin : BasePlugin
             "Debug",
             "DebugVerbose",
             false,
-            "Log every boss registration and teardown. Noisy; only useful when a plate does " +
-            "not appear or appears over the wrong enemy.");
+            "Log every boss registration and teardown, plus 15-second performance summaries. " +
+            "Noisy; only useful for diagnosis and profiling.");
+
+        _showFps = Config.Bind(
+            "Debug",
+            "ShowFps",
+            false,
+            "Show a small smoothed FPS counter in the top-left corner.");
 
         ApplyConfigValues();
 
@@ -241,7 +249,7 @@ public class Plugin : BasePlugin
             $"VerticalOffset={VerticalOffset:0.##} " +
             $"PlateScale={PlateScale:0.####} MiniBossPlateScale={MiniBossPlateScale:0.####} " +
             $"ScanInterval={ScanInterval:0.##}s " +
-            $"DebugVerbose={DebugVerbose}");
+            $"ShowFps={ShowFps} DebugVerbose={DebugVerbose}");
 
         Log.LogInfo(
             $"Hotkeys: {TogglePlatesKey} shows/hides plates, " +
@@ -272,6 +280,7 @@ public class Plugin : BasePlugin
         PlateScale = Mathf.Clamp(_plateScale.Value, 0.001f, 0.03f);
         MiniBossPlateScale = Mathf.Clamp(_miniBossPlateScale.Value, 0.001f, 0.03f);
         ScanInterval = Mathf.Clamp(_scanInterval.Value, 0.1f, 5f);
+        ShowFps = _showFps.Value;
         DebugVerbose = _debugVerbose.Value;
         TogglePlatesKey = ParseKey(_togglePlatesKey.Value, KeyCode.F9);
         ToggleMiniBossesKey = ParseKey(_toggleMiniBossesKey.Value, KeyCode.F10);
@@ -348,6 +357,13 @@ public class Plugin : BasePlugin
 /// </summary>
 public class BossPlateBehaviour : MonoBehaviour
 {
+    private const float FpsRefreshSeconds = 0.5f;
+
+    private float _fpsElapsed;
+    private int _fpsFrames;
+    private string _fpsText = "";
+    private bool _fpsFailed;
+
     public BossPlateBehaviour(IntPtr ptr) : base(ptr) { }
 
     /// <summary>Input only. Deliberately outside the Enabled gate and outside the valve that
@@ -356,6 +372,57 @@ public class BossPlateBehaviour : MonoBehaviour
     private void Update()
     {
         Hotkeys.Update();
+
+        if (!Plugin.ShowFps || _fpsFailed) return;
+
+        try
+        {
+            _fpsElapsed += Time.unscaledDeltaTime;
+            _fpsFrames++;
+            if (_fpsElapsed >= FpsRefreshSeconds)
+            {
+                int fps = Mathf.RoundToInt(_fpsFrames / _fpsElapsed);
+                _fpsText = fps + " FPS";
+                _fpsElapsed = 0f;
+                _fpsFrames = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            _fpsFailed = true;
+            Plugin.Log.LogWarning("FPS counter update failed, disabling it: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// IMGUI draws after the game's low-resolution render texture, so this diagnostic stays
+    /// small and readable instead of being enlarged with the pixel-art game image.
+    /// </summary>
+    private void OnGUI()
+    {
+        if (!Plugin.ShowFps || _fpsFailed || string.IsNullOrEmpty(_fpsText)) return;
+
+        try
+        {
+            Color previous = GUI.color;
+            try
+            {
+                GUI.color = Color.black;
+                GUI.Label(new Rect(9f, 9f, 80f, 24f), _fpsText);
+                GUI.color = Color.white;
+                GUI.Label(new Rect(8f, 8f, 80f, 24f), _fpsText);
+            }
+            finally
+            {
+                // IMGUI color is global state. Never tint the game's own UI if one label fails.
+                GUI.color = previous;
+            }
+        }
+        catch (Exception ex)
+        {
+            _fpsFailed = true;
+            Plugin.Log.LogWarning("FPS counter draw failed, disabling it: " + ex.Message);
+        }
     }
 
     private void LateUpdate()

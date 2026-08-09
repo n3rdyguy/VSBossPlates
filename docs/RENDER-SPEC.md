@@ -85,10 +85,9 @@ fallback is a screen-space overlay plus `WorldToScreenPoint` scaled by
 ## 3. Pooling is the thing that must be right
 
 Enemies come from **QFSW MOP2** pools, owned by `VampireSurvivors.App.Framework.EnemyFactory`
-(`Dictionary<EnemyType, ObjectPool> _cachedEnemyPools`, plus a
-`HashSet<EnemyType> _bossTypes`). `ObjectPool.Release(GameObject)` puts an instance back and
-`GetObject()` hands the same one out again. `EnemyController.InitialiseLocalData(EnemyType)`
-then re-keys it to a different enemy.
+(`Dictionary<EnemyType, ObjectPool> _cachedEnemyPools`). `ObjectPool.Release(GameObject)` puts
+an instance back and `GetObject()` hands the same one out again.
+`EnemyController.InitialiseLocalData(EnemyType)` then re-keys it to a different enemy.
 
 **An `EnemyController` is never destroyed.** Any map keyed on object identity will keep a boss
 plate alive over whatever that instance became next.
@@ -182,8 +181,48 @@ is painful. It was never a good option either.
 Tested with `IsBoss` and `IsBossEnemy()`, never a type-name list. There are
 two dozen boss controller subclasses today (`EnemyControllerBoss_BatDragon`,
 `EX_Boss_Colossus`, `TP_ADV_BOSS_*`, `LEMON_BOSS_*`, `EME_TeleporterBoss`, and so on) and any
-list will rot on the next DLC. `EnemyFactory._bossTypes` is the authoritative set if a
-type-only test is ever needed.
+list will rot on the next DLC. `Stage.BossTypes` is the authoritative set if a type-only test is
+ever needed. It is a `List<Nullable<EnemyType>>`; before the current public-branch build it lived
+at `EnemyFactory._bossTypes` as a `HashSet<EnemyType>`.
+
+### 4.5 Hot-path optimization
+
+Discovery is a branch-heavy walk over IL2CPP object wrappers. Each useful value comes from a
+native property or method call, and candidates take different paths through boss, treasure,
+Bestiary, experience and health checks.
+
+Per-frame work is bounded by `MaxPlates` (60 at most and by default) and is likewise dominated
+by Unity transform, renderer and UI calls. The useful optimization is to cross those boundaries
+less often:
+
+- Discovery carries type, boss and treasure facts into registration instead of reading them
+  again. The shared `EnemyData` handle is read once for Bestiary, experience and base health.
+- Rejected enemies still exit before the `EnemyData` read, preserving the reject memory's cheap
+  path.
+- A plate remembers the last fill and health values sent to Unity. Unchanged values do not
+  repeat native UI setters or rebuild HP text every frame.
+- The plate caches its root transform, and its constant rotation and scale are set at creation
+  instead of every `LateUpdate`. Cache only after adding `Canvas`: Unity replaces the initial
+  `Transform` with a `RectTransform`, invalidating any wrapper captured before that conversion.
+- If construction fails after creating the root, destroy the partial canvas before returning.
+  Plate creation retries while the enemy remains tracked, so one leaked object per attempt grows
+  into thousands within minutes.
+
+With `DebugVerbose=true`, one `[Perf]` line is emitted every 15 seconds. It reports isolated
+`BossRegistry.Tick` and discovery-scan timings, average tracked plates, scanned enemies, and the
+number of fill, HP text, position and constant-transform writes. Compare builds at similar
+`trackedAvg` and `scanned` values; whole-run averages without those denominators are misleading.
+
+The 2026-08-09 Boss Rash comparison measured 0.0791 ms of non-scan work per active baseline frame
+and 0.0674 ms after optimization, about 15% lower despite the optimized sample averaging slightly
+more plates. Fill writes fell from three per tracked-plate frame to 0.126, HP text writes from one
+to 0.126, and rotation/scale writes from two to effectively zero. Total tick averages were 0.0917
+and 0.0906 ms; scan workloads differed too much for that smaller difference to mean anything.
+
+A later God Mode stress run spawned 84 bosses and held the old 20-plate default for eleven
+measurement windows. Four qualifying types never received a free slot before they died. Raising
+the cap to 60 produced no observable performance drop, so 60 is now both the default and the hard
+configuration maximum.
 
 ---
 
@@ -220,6 +259,16 @@ Canvas units, scaled to world units by `PlateScale`.
 - The HP pair shares one unit, chosen from the maximum. Formatting each side independently
   gave `393k / 393.2k`, where the two halves disagree on precision and an untouched boss looks
   damaged.
+- Fill and HP text setters run only when their inputs change. Position still updates every
+  frame because the enemy can move every frame.
+
+### 5.4 FPS counter
+
+`ShowFps` uses IMGUI rather than another world-space canvas. It is diagnostic screen text and
+should stay small and sharp, so drawing after the game's low-resolution render texture is the
+right tradeoff here. The displayed value counts `Update` calls over half-second windows using
+unscaled time. A black one-pixel shadow keeps the default white label readable without creating
+or loading another font.
 
 ### 5.3 Small plates are blurry, and no setting fixes that
 
@@ -300,11 +349,12 @@ about". A hazard is not catalogued; a real boss is. So the plate is gated on hav
 record - a non-empty `bName` and not `bIgnore` - rather than on the boss flag alone. Config
 `RequireBestiaryEntry`, default on.
 
-**And `EnemyFactory._bossTypes` is not a list of bosses either.** A Mad Forest run showed
-`BAT4` going through the boss path with `bName='' xp=30 maxHp=5` - five hit points, an ordinary
-bat. The set is closer to "types the boss spawner is allowed to use", 198 of them. It is only
-useful for the mini-boss tier *combined* with the Bestiary test; on its own it would put a
-health bar over every bat in the forest.
+**And `Stage.BossTypes` is not a list of bosses either.** A Mad Forest run against its earlier
+`EnemyFactory._bossTypes` form showed `BAT4` going through the boss path with
+`bName='' xp=30 maxHp=5` - five hit points, an ordinary bat. The set is closer to "types the boss
+spawner is allowed to use", 198 of them in that run. It is only useful for the mini-boss tier
+*combined* with the Bestiary test; on its own it would put a health bar over every bat in the
+forest.
 
 Worth noting that `bIgnore` was false for both `BULLET_W` and `BAT4`, so `bIgnore` alone is not
 the discriminator. An empty `bName` is.

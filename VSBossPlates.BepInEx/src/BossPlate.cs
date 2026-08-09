@@ -34,10 +34,18 @@ internal sealed class BossPlate
     private const float TextPadding = 4f;
 
     private GameObject _root;
+    // Each Unity property access crosses the managed/IL2CPP boundary. Keep the component handle
+    // and the last values sent to the UI so an unchanged boss does not repeat native calls every
+    // frame merely to write the same state again.
+    private Transform _rootTransform;
     private RectTransform _fill;
     private TextMeshProUGUI _nameText;
     private TextMeshProUGUI _hpText;
     private bool _visible = true;
+    private float _lastFraction = float.NaN;
+    private float _lastCurrent = float.NaN;
+    private float _lastMax = float.NaN;
+    private string _lastHpText;
 
     /// <summary>A scheduled stage boss rather than a mini-boss. Decides which scale applies -
     /// see Scale.</summary>
@@ -49,17 +57,21 @@ internal sealed class BossPlate
 
     internal static BossPlate Create(EnemyController enemy, string displayName, bool isMajor)
     {
+        BossPlate plate = null;
         try
         {
             Camera cam = ResolveCamera(enemy);
 
-            var plate = new BossPlate();
+            plate = new BossPlate();
             plate._isMajor = isMajor;
             plate.Build(enemy, displayName, cam);
             return plate._root == null ? null : plate;
         }
         catch (Exception ex)
         {
+            // Build can fail after creating the root. Leaving that partial canvas behind leaks a
+            // native object every retry, which turned one bad transform into thousands of them.
+            if (plate != null) plate.Destroy();
             Plugin.Log.LogWarning("Could not build boss plate: " + ex.Message);
             return null;
         }
@@ -80,9 +92,13 @@ internal sealed class BossPlate
         try { _root.layer = enemy.gameObject.layer; } catch { }
 
         var rootRect = _root.GetComponent<RectTransform>();
+        // Adding Canvas replaces a new GameObject's Transform with a RectTransform. Cache only
+        // after that conversion; the old wrapper points at a destroyed native component.
+        _rootTransform = rootRect;
         rootRect.sizeDelta = new Vector2(PlateWidth, PlateHeight);
-        rootRect.localScale = Vector3.one * Scale;
+        _rootTransform.localScale = Vector3.one * Scale;
         rootRect.rotation = Quaternion.identity;
+        PerformanceStats.RecordStaticTransformWrites(2);
 
         Sprite white = GetWhiteSprite();
 
@@ -166,18 +182,28 @@ internal sealed class BossPlate
 
         // Width is driven by the anchor rather than Image.fillAmount so the bar does not
         // depend on a sprite being sliced or on Image.type surviving a null sprite.
-        if (_fill != null)
+        if (_fill != null && fraction != _lastFraction)
         {
+            _lastFraction = fraction;
             Vector2 anchorMax = _fill.anchorMax;
             anchorMax.x = fraction;
             _fill.anchorMax = anchorMax;
-            _fill.offsetMin = new Vector2(BarInset, BarInset);
-            _fill.offsetMax = new Vector2(-BarInset, -BarInset);
+            PerformanceStats.RecordFillWrites(1);
         }
 
-        if (_hpText != null)
+        if (_hpText != null && (current != _lastCurrent || max != _lastMax))
         {
-            ((TMP_Text)_hpText).text = FormatPair(current, max);
+            _lastCurrent = current;
+            _lastMax = max;
+
+            PerformanceStats.RecordHpFormat();
+            string text = FormatPair(current, max);
+            if (text != _lastHpText)
+            {
+                _lastHpText = text;
+                ((TMP_Text)_hpText).text = text;
+                PerformanceStats.RecordHpTextWrite();
+            }
         }
     }
 
@@ -207,12 +233,11 @@ internal sealed class BossPlate
 
         float scale = Scale;
         float halfPlate = PlateHeight * 0.5f * scale;
-        _root.transform.position = new Vector3(
+        _rootTransform.position = new Vector3(
             basePos.x,
             top + Plugin.VerticalOffset + halfPlate,
             basePos.z);
-        _root.transform.rotation = Quaternion.identity;
-        _root.transform.localScale = Vector3.one * scale;
+        PerformanceStats.RecordPositionWrite();
     }
 
     internal void SetVisible(bool visible)
@@ -228,6 +253,7 @@ internal sealed class BossPlate
         try { Object.Destroy(_root); }
         catch { }
         _root = null;
+        _rootTransform = null;
         _fill = null;
         _nameText = null;
         _hpText = null;

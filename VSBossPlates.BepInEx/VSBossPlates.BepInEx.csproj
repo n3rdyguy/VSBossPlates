@@ -89,6 +89,10 @@
       <HintPath>$(BepInExPath)\interop\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(BepInExPath)\interop\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>$(BepInExPath)\interop\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>

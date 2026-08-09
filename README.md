@@ -1,12 +1,12 @@
 # VS Boss Plates
 
-**Version 0.1.2** - Health plates above bosses for **Vampire Survivors** on Unity 6 / BepInEx IL2CPP.
+**Version 0.1.3** - Health plates above bosses for **Vampire Survivors** on Unity 6 / BepInEx IL2CPP.
 
 While a boss is alive, a plate follows it showing a health bar, the boss name, and current/max HP. The game itself never tells you how much health a boss has left, or even which boss you are fighting.
 
 | | |
 |--|--|
-| **Latest release** | [v0.1.2](https://github.com/n3rdyguy/VSBossPlates/releases/tag/v0.1.2) - development build |
+| **Latest release** | [v0.1.3](https://github.com/n3rdyguy/VSBossPlates/releases/tag/v0.1.3) - development build |
 | **Nexus Mods** | [vampiresurvivors/mods/106](https://www.nexusmods.com/vampiresurvivors/mods/106) |
 | **Game** | Vampire Survivors **1.15.x** (developed against **1.15.114**), and the **1.16 public beta**, Unity **6000.0.62f1** |
 | **Loader** | [BepInEx 6 IL2CPP](https://builds.bepinex.dev/projects/bepinex_be) (BE / bleeding-edge) |
@@ -45,7 +45,7 @@ BepInEx 6 has no stable release. Bleeding-edge *is* the correct channel here, no
 | Plates | `HideWhenFull` | `false` | Only show a plate once the boss has taken damage |
 | Plates | `IncludeTreasureCarriers` | `true` | Plate any enemy carrying a treasure chest. The game's own mark of a mini-boss |
 | Plates | `IncludeMiniBosses` | `true` | Also plate strong mini-bosses, not just the scheduled stage boss |
-| Plates | `MaxPlates` | `20` | Most plates on screen at once |
+| Plates | `MaxPlates` | `60` | Most plates on screen at once |
 | Plates | `RequireBestiaryEntry` | `true` | Only plate bosses the Bestiary knows about, so stage hazards are skipped |
 | Plates | `BonusXpThreshold` | `25` | Also plate an enemy worth at least this much XP, Bestiary entry or not. `0` turns it off |
 | Plates | `MiniBossMinHp` | `20` | Base health an enemy needs before the boss type set alone earns it a plate |
@@ -55,12 +55,13 @@ BepInEx 6 has no stable release. Bleeding-edge *is* the correct channel here, no
 | Plates | `ScanIntervalSeconds` | `0.5` | How often to look for newly spawned bosses |
 | Hotkeys | `TogglePlatesKey` | `F9` | Show/hide all plates, mid-run. Saved to this file |
 | Hotkeys | `ToggleMiniBossesKey` | `F10` | Show/hide mini-boss plates only. Saved to this file |
-| Debug | `DebugVerbose` | `false` | Log every registration and teardown |
+| Debug | `DebugVerbose` | `false` | Log registrations, teardowns and 15-second performance summaries |
+| Debug | `ShowFps` | `false` | Show a small smoothed FPS counter in the top-left corner |
 
 ## Expected log lines
 
 ```
-[Info: VS Boss Plates] VS Boss Plates 0.1.2 loading...
+[Info: VS Boss Plates] VS Boss Plates 0.1.3 loading...
 [Info: VS Boss Plates] Plates: Enabled=True ShowName=True ShowNumbers=True ...
 [Info: VS Boss Plates] VS Boss Plates initialized.
 ```

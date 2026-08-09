@@ -11,6 +11,10 @@ claim about behaviour in this file was observed in game, not deduced.
 test on the 1.16 public beta, which is evidence that none of the members named here moved - but it
 is not the same as having re-read them. Re-dump when 1.16 ships, and say so here when you do.
 
+Exception: `Stage.BossTypes` and `EnemyFactory` were re-read from the current Steam public-branch
+interop assemblies, build ID 24552181, on 2026-08-09. The in-game version string has not yet been
+observed, so this is a build claim, not a played-on or smoke-test claim.
+
 ## Which assembly
 
 `<game>\BepInEx\interop\`
@@ -108,8 +112,9 @@ Status effects that **do** exist: `IsDefanged`, `IsTimeStopped`, `IsTimeSlowed`,
 (`TP_ADV_BOSS_*`, `LEMON_BOSS_*`, `EME_TeleporterBoss`, `Enemy_TP_GateBoss`).
 
 **Do not test for a boss with a type-name list.** There are two dozen today and each DLC adds
-more. Use `IsBoss` / `IsBossEnemy()`. `EnemyFactory._bossTypes` is a
-`HashSet<EnemyType>` if a type-only answer is needed without an instance.
+more. Use `IsBoss` / `IsBossEnemy()`. `Stage.BossTypes` is a
+`List<Nullable<EnemyType>>` if a type-only answer is needed without an instance. In 1.15.114
+that collection lived at `EnemyFactory._bossTypes` as a `HashSet<EnemyType>`.
 
 **The override list is why teardown patches are unsafe.** A Harmony patch on
 `EnemyController.OnRecycleEnemy` does not fire for an instance whose subclass overrides it.
@@ -126,8 +131,8 @@ Third-party **QFSW MOP2**. `QFSW.MOP2.ObjectPool : ScriptableObject`.
 | `IEnumerable<GameObject> GetAllActiveObjects()` | |
 
 Owner: `VampireSurvivors.App.Framework.EnemyFactory` with
-`Dictionary<EnemyType, ObjectPool> _cachedEnemyPools`, `HashSet<EnemyType> _bossTypes`,
-`ObjectPool GetEnemyPool(EnemyType)` and `GeneratePool(...)`.
+`Dictionary<EnemyType, ObjectPool> _cachedEnemyPools`, `ObjectPool GetEnemyPool(EnemyType)` and
+`GeneratePool(...)`. The current public-branch interop no longer exposes `_bossTypes` here.
 
 **The consequence, stated plainly: an `EnemyController` is never destroyed. It is deactivated,
 pooled, and later handed out as a completely different enemy. Never key tracking off object
@@ -144,6 +149,7 @@ began - that comparison holds no matter which code path released the instance.
 | `GameObject SpawnEnemy(EnemyType, Vector2, bool, bool)` | |
 | `T SpawnEnemy<T>(...) where T : EnemyController` | generic; avoid patching |
 | `List<EnemyController> SpawnedEnemies` | live list, via `_spawnedEnemies` |
+| `List<Nullable<EnemyType>> BossTypes` | current type-only boss set; skip null entries |
 | `Camera _mainCamera` | public **field**, no property accessor |
 | `bool ShouldDespawnEnemyOutsideRect(EnemyController)`, `Rect EnemiesDespawnRect` | culling |
 
@@ -188,9 +194,10 @@ turn up in the boss machinery without one:
 Note that `bIgnore` was **false** in both cases, so `bIgnore` alone is not the discriminator -
 an empty `bName` is.
 
-`EnemyFactory._bossTypes` is therefore **not** a list of bosses. It is closer to "types the
-boss spawner is allowed to use", and it contains 198 entries including ordinary bats. Combine
-it with a Bestiary record if you want strong enemies rather than all enemies.
+`Stage.BossTypes` is therefore **not** a list of bosses. It is closer to "types the boss spawner
+is allowed to use", and the earlier `EnemyFactory._bossTypes` form contained 198 entries including
+ordinary bats. Combine it with a Bestiary record if you want strong enemies rather than all
+enemies.
 
 ## Cameras
 

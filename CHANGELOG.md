@@ -2,6 +2,33 @@
 
 All notable changes to VS Boss Plates are listed here.
 
+## [0.1.3] - 2026-08-09
+
+Still a development build. Reduces the plugin's per-frame work, restores compatibility with the
+current public game build, and raises the plate limit after an in-game boss stress test.
+
+### Fixed
+- **No plates appeared and the log grew by megabytes.** The optimized build cached the root
+  `Transform` before adding its Canvas. Unity replaced that component with a `RectTransform`, so
+  every plate creation wrote scale through a dead native wrapper and failed. The cache now takes
+  the final `RectTransform`, and failed partial builds are destroyed instead of leaked.
+
+### Changed
+- **Qualifying bosses disappeared during large waves because twenty plates filled the cap.** The
+  default `MaxPlates` is now 60. A stress run reached the old cap for eleven measurement windows;
+  repeating it at 60 produced no observable performance drop.
+- Boss-type discovery builds again against the current public-branch game API. The game moved
+  the type set from `EnemyFactory._bossTypes` to the nullable `Stage.BossTypes` list.
+- `DebugVerbose` now emits 15-second plugin timing and Unity-write summaries for comparing builds
+  in the same in-game scenario.
+- Unchanged bosses no longer resend the same fill, HP text, scale, rotation and inset values to
+  Unity every frame. Discovery also carries one snapshot of an enemy's classification data
+  through registration instead of repeating IL2CPP reads.
+
+### Added
+- `ShowFps` draws a small, smoothed top-left FPS counter for diagnosing perceived changes in game
+  speed. It is off by default.
+
 ## [0.1.2] - 2026-08-08
 
 Still a development build. Fixes a regression in 0.1.1 and the reason plates went missing on
